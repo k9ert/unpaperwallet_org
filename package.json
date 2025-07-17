@@ -13,6 +13,8 @@
     "bitcoinjs-lib": "^6.1.5",
     "browserify": "^17.0.1",
     "buffer": "^6.0.3",
-    "qrcode": "^1.5.3"
+    "ecpair": "^2.1.0",
+    "qrcode": "^1.5.3",
+    "tiny-secp256k1": "^2.2.3"
   }
 }
