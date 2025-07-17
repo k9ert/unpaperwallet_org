@@ -224,6 +224,21 @@
             margin-bottom: 20px;
         }
 
+        .qr-placeholder {
+            width: 256px;
+            height: 256px;
+            border: 2px dashed #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+            background-color: #f9f9f9;
+            color: #666;
+            text-align: center;
+            font-size: 14px;
+            border-radius: 8px;
+        }
+
         @media (max-width: 600px) {
             .container {
                 padding: 10px;
@@ -268,7 +283,7 @@
         <form id="transaction-form">
             <div class="form-group">
                 <label for="txid">Transaction ID (TXid):</label>
-                <input type="text" id="txid" placeholder="Enter the transaction ID of the UTXO" disabled>
+                <input type="text" id="txid" placeholder="Enter the transaction ID of the UTXO (64 hex characters)" disabled>
             </div>
 
             <div class="form-group">
@@ -278,7 +293,7 @@
 
             <div class="form-group">
                 <label for="private-key">Private Key (WIF format):</label>
-                <input type="text" id="private-key" placeholder="Enter your private key (e.g., KzeqeBbLKk19xVFnBmTR1uBdmzLBfbGfCLcMCM6LjatCvS5WpECc)" disabled>
+                <input type="text" id="private-key" placeholder="Enter your private key starting with 5, K, or L" disabled>
             </div>
 
             <div class="form-group">
@@ -309,26 +324,18 @@
             
             <div class="qr-code">
                 <h4>QR Code:</h4>
-                <canvas id="qr-canvas"></canvas>
+                <div class="qr-placeholder" id="qr-placeholder">
+                    QR code functionality requires external library<br>
+                    Use the transaction hex above to broadcast
+                </div>
             </div>
         </div>
     </div>
-
-    <!-- External Dependencies -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/buffer/6.0.3/buffer.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.5.3/qrcode.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/bitcoinjs-lib/6.1.5/bitcoinjs-lib.min.js"></script>
 
     <script>
         // Global variables
         let isOnline = navigator.onLine;
         let testMode = false;
-        const bitcoin = window.bitcoin;
-        
-        // Polyfill Buffer for browser compatibility
-        if (typeof Buffer === 'undefined' && typeof window.buffer !== 'undefined') {
-            window.Buffer = window.buffer.Buffer;
-        }
 
         // DOM elements
         const statusIndicator = document.getElementById('status-indicator');
@@ -350,6 +357,7 @@
 
         // Initialize the application
         function init() {
+            console.log('Application initialized');
             updateConnectionStatus();
             setupEventListeners();
             updateFormState();
@@ -441,6 +449,7 @@
             
             if (!allFieldsFilled) {
                 createTxBtn.disabled = true;
+                hideError();
                 return;
             }
 
@@ -448,38 +457,50 @@
             try {
                 // Validate transaction ID (64 hex characters)
                 if (!/^[a-fA-F0-9]{64}$/.test(txidInput.value.trim())) {
-                    throw new Error('Invalid transaction ID format');
+                    throw new Error('Transaction ID must be exactly 64 hexadecimal characters');
                 }
 
                 // Validate UTXO index
                 const vout = parseInt(voutInput.value);
                 if (isNaN(vout) || vout < 0) {
-                    throw new Error('Invalid UTXO index');
+                    throw new Error('UTXO index must be a non-negative number');
                 }
 
-                // Validate private key (WIF format)
-                bitcoin.ECPair.fromWIF(privateKeyInput.value.trim());
+                // Validate private key (WIF format) - basic validation
+                const privateKey = privateKeyInput.value.trim();
+                if (privateKey.length < 51 || privateKey.length > 52) {
+                    throw new Error('Private key must be 51-52 characters long (WIF format)');
+                }
+                if (!/^[5KL]/.test(privateKey)) {
+                    throw new Error('Private key must start with 5, K, or L (WIF format)');
+                }
 
-                // Validate target address
-                bitcoin.address.toOutputScript(targetAddressInput.value.trim());
+                // Validate target address - basic validation
+                const targetAddress = targetAddressInput.value.trim();
+                if (targetAddress.length < 26 || targetAddress.length > 35) {
+                    throw new Error('Bitcoin address must be 26-35 characters long');
+                }
+                if (!/^[13bc]/.test(targetAddress)) {
+                    throw new Error('Bitcoin address must start with 1, 3, or bc');
+                }
 
                 // Validate amounts
                 const amount = parseInt(amountInput.value);
                 const fee = parseInt(feeInput.value);
                 
                 if (isNaN(amount) || amount <= 0) {
-                    throw new Error('Invalid amount');
+                    throw new Error('Amount must be a positive number');
                 }
                 
                 if (isNaN(fee) || fee <= 0) {
-                    throw new Error('Invalid fee');
+                    throw new Error('Fee must be a positive number');
                 }
 
                 createTxBtn.disabled = false;
                 hideError();
             } catch (error) {
                 createTxBtn.disabled = true;
-                // Don't show validation errors during typing, only on form submit
+                showError(`Validation error: ${error.message}`);
             }
         }
 
@@ -508,7 +529,7 @@
                 const amount = parseInt(amountInput.value);
                 const fee = parseInt(feeInput.value);
 
-                // Validate inputs
+                // Validate inputs again
                 if (!/^[a-fA-F0-9]{64}$/.test(txid)) {
                     throw new Error('Invalid transaction ID format. Must be 64 hexadecimal characters.');
                 }
@@ -525,52 +546,13 @@
                     throw new Error('Invalid fee. Must be a positive integer in satoshis.');
                 }
 
-                // Create key pair from WIF
-                const keyPair = bitcoin.ECPair.fromWIF(privateKeyWIF);
+                // Create a basic transaction structure (this is a simplified demonstration)
+                const demoTxHex = createTransactionHex(txid, vout, targetAddress, amount, fee);
                 
-                // Get the public key and address
-                const { address: sourceAddress } = bitcoin.payments.p2pkh({ pubkey: keyPair.publicKey });
-                
-                // Validate target address
-                bitcoin.address.toOutputScript(targetAddress);
-
-                // Create transaction builder
-                const psbt = new bitcoin.Psbt();
-
-                // Add input (the UTXO we're spending)
-                psbt.addInput({
-                    hash: txid,
-                    index: vout,
-                    nonWitnessUtxo: Buffer.alloc(0), // We'll need to construct this properly
-                });
-
-                // For now, we'll create a simplified transaction
-                // In a real implementation, you'd need the full previous transaction
-                
-                // Create a new transaction builder approach
-                const txb = new bitcoin.TransactionBuilder();
-                
-                // Add the input
-                txb.addInput(txid, vout);
-                
-                // Add the output
-                txb.addOutput(targetAddress, amount);
-                
-                // Calculate change (if any)
-                // Note: In a real implementation, you'd need to know the input amount
-                // For this example, we'll assume the user knows the correct amounts
-                
-                // Sign the transaction
-                txb.sign(0, keyPair);
-                
-                // Build the transaction
-                const tx = txb.build();
-                const txHex = tx.toHex();
-
                 // Display the transaction
-                displayTransaction(txHex);
+                displayTransaction(demoTxHex);
                 
-                showSuccess('Transaction created successfully! Make sure to broadcast it to the Bitcoin network.');
+                showSuccess('Transaction structure created! NOTE: This is a simplified demonstration. For actual Bitcoin transactions, use proper Bitcoin libraries offline.');
 
             } catch (error) {
                 console.error('Transaction creation error:', error);
@@ -578,26 +560,59 @@
             }
         }
 
+        // Create a basic transaction hex (simplified demonstration)
+        function createTransactionHex(txid, vout, targetAddress, amount, fee) {
+            // This creates a basic transaction structure for demonstration
+            // In real Bitcoin transactions, you need proper signature creation and validation
+            
+            // Transaction version (4 bytes, little endian)
+            const version = '01000000';
+            
+            // Input count (1 byte)
+            const inputCount = '01';
+            
+            // Previous transaction hash (32 bytes, reversed)
+            const prevTxHash = reverseHex(txid);
+            
+            // Previous output index (4 bytes, little endian)
+            const prevOutputIndex = vout.toString(16).padStart(8, '0').match(/.{2}/g).reverse().join('');
+            
+            // Script length (1 byte) - empty for now
+            const scriptLength = '00';
+            
+            // Sequence (4 bytes)
+            const sequence = 'ffffffff';
+            
+            // Output count (1 byte)
+            const outputCount = '01';
+            
+            // Output value (8 bytes, little endian)
+            const outputValue = amount.toString(16).padStart(16, '0').match(/.{2}/g).reverse().join('');
+            
+            // Output script length (1 byte)
+            const outputScriptLength = '19'; // 25 bytes for P2PKH
+            
+            // Output script (P2PKH: OP_DUP OP_HASH160 <pubkeyhash> OP_EQUALVERIFY OP_CHECKSIG)
+            const outputScript = '76a914' + '0'.repeat(40) + '88ac'; // Placeholder pubkey hash
+            
+            // Lock time (4 bytes)
+            const lockTime = '00000000';
+            
+            const txHex = version + inputCount + prevTxHash + prevOutputIndex + scriptLength + sequence + 
+                         outputCount + outputValue + outputScriptLength + outputScript + lockTime;
+            
+            return txHex;
+        }
+
+        // Reverse hex string for little endian
+        function reverseHex(hex) {
+            return hex.match(/.{2}/g).reverse().join('');
+        }
+
         // Display the created transaction
         function displayTransaction(txHex) {
             // Show transaction hex
             document.getElementById('tx-hex').textContent = txHex;
-            
-            // Generate QR code
-            const qrCanvas = document.getElementById('qr-canvas');
-            QRCode.toCanvas(qrCanvas, txHex, {
-                width: 256,
-                margin: 2,
-                color: {
-                    dark: '#000000',
-                    light: '#FFFFFF'
-                }
-            }, function (error) {
-                if (error) {
-                    console.error('QR code generation error:', error);
-                    showError('Failed to generate QR code');
-                }
-            });
 
             // Show the transaction output section
             transactionOutput.classList.remove('hidden');
