@@ -634,7 +634,7 @@
                 // Create Bitcoin transaction using TransactionBuilder (bitcoinjs-lib 5.x)
                 if (typeof bitcoin !== 'undefined' && bitcoin.TransactionBuilder && bitcoin.ECPair) {
                     // Create key pair from private key
-                    const keyPair = bitcoin.ECPair.fromWIF(privateKey, bitcoin.networks.bitcoin);
+                    const keyPair = bitcoin.ECPair.fromWIF(privateKeyWIF, bitcoin.networks.bitcoin);
                     
                     // Create transaction builder
                     const txBuilder = new bitcoin.TransactionBuilder(bitcoin.networks.bitcoin);
