@@ -394,6 +394,8 @@
             console.log('- payments:', typeof bitcoin.payments);
             console.log('- Psbt:', typeof bitcoin.Psbt);
             console.log('- Transaction:', typeof bitcoin.Transaction);
+            console.log('- TransactionBuilder:', typeof bitcoin.TransactionBuilder);
+            console.log('- ECPair:', typeof bitcoin.ECPair);
             console.log('- networks:', typeof bitcoin.networks);
             console.log('- script:', typeof bitcoin.script);
             
@@ -629,38 +631,32 @@
                     throw new Error('Invalid fee. Must be a positive integer in satoshis.');
                 }
 
-                // Create Bitcoin transaction using modern PSBT approach
-                if (typeof bitcoin !== 'undefined' && bitcoin.Psbt && bitcoin.payments) {
-                    // Note: ECPair is not available in modern bitcoinjs-lib
-                    // We need to use a different approach for key handling
+                // Create Bitcoin transaction using TransactionBuilder (bitcoinjs-lib 5.x)
+                if (typeof bitcoin !== 'undefined' && bitcoin.TransactionBuilder && bitcoin.ECPair) {
+                    // Create key pair from private key
+                    const keyPair = bitcoin.ECPair.fromWIF(privateKey, bitcoin.networks.bitcoin);
                     
-                    // For now, create a basic transaction structure
-                    // This is a simplified approach - real implementation would need proper key handling
-                    const psbt = new bitcoin.Psbt({ network: bitcoin.networks.bitcoin });
+                    // Create transaction builder
+                    const txBuilder = new bitcoin.TransactionBuilder(bitcoin.networks.bitcoin);
                     
-                    // Add input - NOTE: This is incomplete and needs proper previous transaction data
-                    // In a real implementation, you would need the full previous transaction
-                    psbt.addInput({
-                        hash: txid,
-                        index: vout,
-                        // nonWitnessUtxo: Buffer.from(previousTxHex, 'hex'), // Required for legacy inputs
-                        // witnessUtxo: { script: outputScript, value: inputAmount } // Required for segwit inputs
-                    });
+                    // Add input
+                    txBuilder.addInput(txid, vout);
                     
                     // Add output
-                    psbt.addOutput({
-                        address: targetAddress,
-                        value: amount
-                    });
+                    txBuilder.addOutput(targetAddress, amount);
                     
-                    // For demonstration, create a raw transaction hex
-                    // This is not a properly signed transaction
-                    const demoHex = createDemoTransactionHex(txid, vout, targetAddress, amount);
-                    displayTransaction(demoHex);
+                    // Sign the input
+                    txBuilder.sign(0, keyPair);
                     
-                    showSuccess('Transaction structure created! NOTE: This is a demonstration. For real Bitcoin transactions, you need proper key handling and signing capabilities.');
+                    // Build the transaction
+                    const tx = txBuilder.build();
+                    const txHex = tx.toHex();
+                    
+                    displayTransaction(txHex);
+                    
+                    showSuccess('Bitcoin transaction created and signed successfully!');
                 } else {
-                    throw new Error('Bitcoin library components not available. Required: Psbt, payments');
+                    throw new Error('Bitcoin library components not available. Required: TransactionBuilder, ECPair');
                 }
 
             } catch (error) {
