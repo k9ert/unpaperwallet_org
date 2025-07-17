@@ -340,6 +340,9 @@
         // Global variables
         let isOnline = navigator.onLine;
         let testMode = false;
+        
+        // Wait for Bitcoin library to load
+        let bitcoin = window.bitcoin;
 
         // DOM elements
         const statusIndicator = document.getElementById('status-indicator');
@@ -362,8 +365,16 @@
         // Initialize the application
         function init() {
             console.log('Application initialized');
+            
+            // Re-assign bitcoin in case it wasn't loaded when declared
+            if (typeof window.bitcoin !== 'undefined') {
+                bitcoin = window.bitcoin;
+            }
+            
             console.log('Bitcoin library loaded:', typeof bitcoin !== 'undefined');
             console.log('QRCode library loaded:', typeof QRCode !== 'undefined');
+            console.log('Bitcoin object structure:', bitcoin ? Object.keys(bitcoin).slice(0, 10) : 'undefined');
+            
             updateConnectionStatus();
             setupEventListeners();
             updateFormState();
@@ -581,7 +592,11 @@
                 }
 
                 // Create Bitcoin transaction using bitcoinjs-lib
-                if (typeof bitcoin !== 'undefined' && bitcoin.ECPair) {
+                console.log('Bitcoin object:', bitcoin);
+                console.log('Bitcoin.ECPair:', bitcoin ? bitcoin.ECPair : 'undefined');
+                console.log('Bitcoin.TransactionBuilder:', bitcoin ? bitcoin.TransactionBuilder : 'undefined');
+                
+                if (typeof bitcoin !== 'undefined' && bitcoin.ECPair && bitcoin.TransactionBuilder) {
                     // Create key pair from WIF
                     const keyPair = bitcoin.ECPair.fromWIF(privateKeyWIF);
                     
