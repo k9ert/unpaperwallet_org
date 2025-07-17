@@ -315,9 +315,9 @@
     </div>
 
     <!-- External Dependencies -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/buffer/6.0.3/buffer.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.5.3/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bitcoinjs-lib/6.1.5/bitcoinjs-lib.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/buffer/6.0.3/buffer.min.js"></script>
 
     <script>
         // Global variables
@@ -326,8 +326,8 @@
         const bitcoin = window.bitcoin;
         
         // Polyfill Buffer for browser compatibility
-        if (typeof Buffer === 'undefined') {
-            window.Buffer = buffer.Buffer;
+        if (typeof Buffer === 'undefined' && typeof window.buffer !== 'undefined') {
+            window.Buffer = window.buffer.Buffer;
         }
 
         // DOM elements
