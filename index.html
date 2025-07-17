@@ -499,12 +499,19 @@
                         throw new Error('Invalid Bitcoin address format.');
                     }
                 } else {
-                    // Fallback basic validation
-                    if (targetAddress.length < 26 || targetAddress.length > 35) {
-                        throw new Error('Bitcoin address must be 26-35 characters long');
+                    // Fallback basic validation for all address types
+                    if (targetAddress.length < 26 || targetAddress.length > 90) {
+                        throw new Error('Bitcoin address must be 26-90 characters long');
                     }
                     if (!/^[13bc]/.test(targetAddress)) {
                         throw new Error('Bitcoin address must start with 1, 3, or bc');
+                    }
+                    // Additional validation for bech32 addresses
+                    if (targetAddress.startsWith('bc1p') && targetAddress.length !== 62) {
+                        throw new Error('Taproot addresses must be exactly 62 characters long');
+                    }
+                    if (targetAddress.startsWith('bc1') && !targetAddress.startsWith('bc1p') && targetAddress.length !== 42) {
+                        throw new Error('Native segwit addresses must be exactly 42 characters long');
                     }
                 }
 
