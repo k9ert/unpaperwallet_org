@@ -298,7 +298,7 @@
 
             <div class="form-group">
                 <label for="target-address">Target Address:</label>
-                <input type="text" id="target-address" placeholder="Enter the Bitcoin address to send to" disabled>
+                <input type="text" id="target-address" placeholder="Enter Bitcoin address (legacy 1..., script 3..., or native segwit bc1...)" disabled>
             </div>
 
             <div class="form-group">
@@ -492,6 +492,12 @@
 
                 // Validate target address - using Bitcoin library
                 const targetAddress = targetAddressInput.value.trim();
+                
+                // Check for unsupported taproot addresses
+                if (targetAddress.startsWith('bc1p')) {
+                    throw new Error('Taproot addresses (bc1p...) are not supported. Use legacy (1...) or native segwit (bc1...) addresses only.');
+                }
+                
                 if (typeof bitcoin !== 'undefined' && bitcoin.address) {
                     try {
                         bitcoin.address.toOutputScript(targetAddress);
@@ -499,17 +505,14 @@
                         throw new Error('Invalid Bitcoin address format.');
                     }
                 } else {
-                    // Fallback basic validation for all address types
-                    if (targetAddress.length < 26 || targetAddress.length > 90) {
-                        throw new Error('Bitcoin address must be 26-90 characters long');
+                    // Fallback basic validation for legacy and native segwit addresses
+                    if (targetAddress.length < 26 || targetAddress.length > 42) {
+                        throw new Error('Bitcoin address must be 26-42 characters long');
                     }
-                    if (!/^[13bc]/.test(targetAddress)) {
-                        throw new Error('Bitcoin address must start with 1, 3, or bc');
+                    if (!/^[13]/.test(targetAddress) && !targetAddress.startsWith('bc1')) {
+                        throw new Error('Bitcoin address must start with 1, 3, or bc1');
                     }
-                    // Additional validation for bech32 addresses
-                    if (targetAddress.startsWith('bc1p') && targetAddress.length !== 62) {
-                        throw new Error('Taproot addresses must be exactly 62 characters long');
-                    }
+                    // Validate native segwit addresses (but not taproot)
                     if (targetAddress.startsWith('bc1') && !targetAddress.startsWith('bc1p') && targetAddress.length !== 42) {
                         throw new Error('Native segwit addresses must be exactly 42 characters long');
                     }
