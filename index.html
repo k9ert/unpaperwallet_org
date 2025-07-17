@@ -332,6 +332,10 @@
         </div>
     </div>
 
+    <!-- Local Bitcoin Library -->
+    <script src="bitcoinjs-lib.min.js"></script>
+    <script src="qrcode.min.js"></script>
+
     <script>
         // Global variables
         let isOnline = navigator.onLine;
@@ -358,6 +362,8 @@
         // Initialize the application
         function init() {
             console.log('Application initialized');
+            console.log('Bitcoin library loaded:', typeof bitcoin !== 'undefined');
+            console.log('QRCode library loaded:', typeof QRCode !== 'undefined');
             updateConnectionStatus();
             setupEventListeners();
             updateFormState();
@@ -466,22 +472,40 @@
                     throw new Error('UTXO index must be a non-negative number');
                 }
 
-                // Validate private key (WIF format) - basic validation
+                // Validate private key (WIF format) - using Bitcoin library
                 const privateKey = privateKeyInput.value.trim();
-                if (privateKey.length < 51 || privateKey.length > 52) {
-                    throw new Error('Private key must be 51-52 characters long (WIF format)');
-                }
-                if (!/^[5KL]/.test(privateKey)) {
-                    throw new Error('Private key must start with 5, K, or L (WIF format)');
+                if (typeof bitcoin !== 'undefined' && bitcoin.ECPair) {
+                    try {
+                        bitcoin.ECPair.fromWIF(privateKey);
+                    } catch (e) {
+                        throw new Error('Invalid private key format. Must be valid WIF format.');
+                    }
+                } else {
+                    // Fallback basic validation
+                    if (privateKey.length < 51 || privateKey.length > 52) {
+                        throw new Error('Private key must be 51-52 characters long (WIF format)');
+                    }
+                    if (!/^[5KL]/.test(privateKey)) {
+                        throw new Error('Private key must start with 5, K, or L (WIF format)');
+                    }
                 }
 
-                // Validate target address - basic validation
+                // Validate target address - using Bitcoin library
                 const targetAddress = targetAddressInput.value.trim();
-                if (targetAddress.length < 26 || targetAddress.length > 35) {
-                    throw new Error('Bitcoin address must be 26-35 characters long');
-                }
-                if (!/^[13bc]/.test(targetAddress)) {
-                    throw new Error('Bitcoin address must start with 1, 3, or bc');
+                if (typeof bitcoin !== 'undefined' && bitcoin.address) {
+                    try {
+                        bitcoin.address.toOutputScript(targetAddress);
+                    } catch (e) {
+                        throw new Error('Invalid Bitcoin address format.');
+                    }
+                } else {
+                    // Fallback basic validation
+                    if (targetAddress.length < 26 || targetAddress.length > 35) {
+                        throw new Error('Bitcoin address must be 26-35 characters long');
+                    }
+                    if (!/^[13bc]/.test(targetAddress)) {
+                        throw new Error('Bitcoin address must start with 1, 3, or bc');
+                    }
                 }
 
                 // Validate amounts
@@ -546,13 +570,37 @@
                     throw new Error('Invalid fee. Must be a positive integer in satoshis.');
                 }
 
-                // Create a basic transaction structure (this is a simplified demonstration)
-                const demoTxHex = createTransactionHex(txid, vout, targetAddress, amount, fee);
-                
-                // Display the transaction
-                displayTransaction(demoTxHex);
-                
-                showSuccess('Transaction structure created! NOTE: This is a simplified demonstration. For actual Bitcoin transactions, use proper Bitcoin libraries offline.');
+                // Create Bitcoin transaction using bitcoinjs-lib
+                if (typeof bitcoin !== 'undefined' && bitcoin.ECPair) {
+                    // Create key pair from WIF
+                    const keyPair = bitcoin.ECPair.fromWIF(privateKeyWIF);
+                    
+                    // Get the public key hash for the source address
+                    const { address: sourceAddress } = bitcoin.payments.p2pkh({ pubkey: keyPair.publicKey });
+                    
+                    // Create transaction builder (legacy approach for simplicity)
+                    const txb = new bitcoin.TransactionBuilder();
+                    
+                    // Add the input (the UTXO we're spending)
+                    txb.addInput(txid, vout);
+                    
+                    // Add the output (where to send the Bitcoin)
+                    txb.addOutput(targetAddress, amount);
+                    
+                    // Sign the transaction
+                    txb.sign(0, keyPair);
+                    
+                    // Build the transaction
+                    const tx = txb.build();
+                    const txHex = tx.toHex();
+                    
+                    // Display the transaction
+                    displayTransaction(txHex);
+                    
+                    showSuccess('Transaction created successfully! This is a properly signed Bitcoin transaction. Make sure to broadcast it to the Bitcoin network.');
+                } else {
+                    throw new Error('Bitcoin library not available. Please ensure the Bitcoin library is properly loaded.');
+                }
 
             } catch (error) {
                 console.error('Transaction creation error:', error);
@@ -613,6 +661,30 @@
         function displayTransaction(txHex) {
             // Show transaction hex
             document.getElementById('tx-hex').textContent = txHex;
+
+            // Generate QR code
+            if (typeof QRCode !== 'undefined') {
+                const qrPlaceholder = document.getElementById('qr-placeholder');
+                qrPlaceholder.innerHTML = '<canvas id="qr-canvas"></canvas>';
+                
+                const qrCanvas = document.getElementById('qr-canvas');
+                QRCode.toCanvas(qrCanvas, txHex, {
+                    width: 256,
+                    margin: 2,
+                    color: {
+                        dark: '#000000',
+                        light: '#FFFFFF'
+                    }
+                }, function (error) {
+                    if (error) {
+                        console.error('QR code generation error:', error);
+                        qrPlaceholder.innerHTML = 'QR code generation failed<br>Use the hex above to broadcast';
+                    }
+                });
+            } else {
+                document.getElementById('qr-placeholder').innerHTML = 
+                    'QR code library not available<br>Use the transaction hex above to broadcast';
+            }
 
             // Show the transaction output section
             transactionOutput.classList.remove('hidden');

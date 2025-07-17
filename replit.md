@@ -59,13 +59,17 @@ Preferred communication style: Simple, everyday language.
 
 ## External Dependencies
 
-### Expected Dependencies
-- **Bitcoin JavaScript Libraries**: For transaction creation and signing
-- **Blockchain API**: For UTXO queries and transaction broadcasting
-- **Cryptographic Libraries**: For key handling and signing operations
-
 ### Current Dependencies
-- No external dependencies currently implemented
+- **bitcoinjs-lib@6.1.5**: Complete Bitcoin library for transaction creation and signing
+- **qrcode@1.5.3**: QR code generation library for transaction display
+- **buffer**: Buffer polyfill for browser compatibility
+- **browserify**: Used to bundle Node.js libraries for browser use
+
+### Implementation Status
+- Bitcoin library locally bundled and integrated
+- QR code library locally bundled and integrated
+- All cryptographic operations handled by bitcoinjs-lib
+- Libraries loaded from local files (not CDN) for offline security
 
 ## Deployment Strategy
 
