@@ -27,13 +27,17 @@
         </div>
 
         <div class="warning">
-            <strong>⚠️ SECURITY WARNING:</strong> This application should only be used offline for maximum security. 
-            Disconnect from the internet before entering any private keys. The input fields are disabled when online 
+            <strong>⚠️ SECURITY WARNING:</strong> This application should only be used offline for maximum security.
+            Disconnect from the internet before entering any private keys. The input fields are disabled when online
             to prevent accidental exposure of sensitive information.
         </div>
 
         <div id="error-message" class="error hidden"></div>
         <div id="success-message" class="success hidden"></div>
+
+        <div class="main-content">
+            <div class="form-column">
+                <h2>Transaction Form</h2>
 
         <form id="transaction-form">
             <div class="form-group">
@@ -66,23 +70,103 @@
                 <input type="number" id="fee" placeholder="Enter transaction fee in satoshis" min="1" value="1000" disabled>
             </div>
 
-            <button type="submit" class="button" id="create-tx-btn" disabled>Create Transaction</button>
-        </form>
+                <button type="submit" class="button" id="create-tx-btn" disabled>Create Transaction</button>
+            </form>
 
-        <div id="transaction-output" class="transaction-output hidden">
-            <h3>Transaction Created Successfully</h3>
-            <div class="form-group">
-                <label for="tx-hex">Transaction Hex:</label>
-                <div class="transaction-hex" id="tx-hex"></div>
-                <button type="button" class="button copy-button" onclick="copyToClipboard('tx-hex')">Copy Transaction</button>
-            </div>
-            
-            <div class="qr-code">
-                <h4>QR Code:</h4>
-                <div class="qr-placeholder" id="qr-placeholder">
-                    QR code functionality requires external library<br>
-                    Use the transaction hex above to broadcast
+            <div id="transaction-output" class="transaction-output hidden">
+                <h3>Transaction Created Successfully</h3>
+                <div class="form-group">
+                    <label for="tx-hex">Transaction Hex:</label>
+                    <div class="transaction-hex" id="tx-hex"></div>
+                    <button type="button" class="button copy-button" onclick="copyToClipboard('tx-hex')">Copy Transaction</button>
                 </div>
+
+                <div class="qr-code">
+                    <h4>QR Code:</h4>
+                    <div class="qr-placeholder" id="qr-placeholder">
+                        QR code functionality requires external library<br>
+                        Use the transaction hex above to broadcast
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="instructions-column">
+            <h2>Step-by-Step Instructions</h2>
+
+            <div class="instruction-section">
+                <h3>1. Prepare Your Browser Tabs</h3>
+                <p>Open these links in separate tabs before starting:</p>
+                <ul>
+                    <li><a href="https://mempool.space" target="_blank" rel="noopener">mempool.space</a> - To find your transaction details</li>
+                    <li><a href="https://coinb.in/#verify" target="_blank" rel="noopener">coinb.in/#verify</a> - To verify your transaction</li>
+                    <li><a href="https://mempool.space/tx/push" target="_blank" rel="noopener">mempool.space/tx/push</a> - To broadcast your transaction</li>
+                </ul>
+            </div>
+
+            <div class="instruction-section">
+                <h3>2. Find Your Transaction Details</h3>
+                <ol>
+                    <li>Go to <strong>mempool.space</strong></li>
+                    <li>Search for your Bitcoin address or transaction</li>
+                    <li>Click on the transaction you want to spend from</li>
+                    <li>Copy the <strong>Transaction ID (TxID)</strong> - it's a 64-character hex string</li>
+                    <li>Find the output you want to spend and note its <strong>UTXO Index</strong> (usually 0 or 1)</li>
+                </ol>
+            </div>
+
+            <div class="instruction-section">
+                <h3>3. Fill in Transaction Details (While Online)</h3>
+                <ol>
+                    <li>Paste the <strong>Transaction ID</strong> into the TxID field</li>
+                    <li>Enter the <strong>UTXO Index</strong> (vout)</li>
+                    <li>Enter your <strong>Target Address</strong> (where you want to send the Bitcoin)</li>
+                    <li>Enter the <strong>Amount</strong> in satoshis (1 BTC = 100,000,000 satoshis)</li>
+                    <li>Set the <strong>Transaction Fee</strong> (default 1000 satoshis is usually fine)</li>
+                    <li><strong>DO NOT</strong> enter your private key yet!</li>
+                </ol>
+            </div>
+
+            <div class="instruction-section">
+                <h3>4. Go Offline for Security</h3>
+                <ol>
+                    <li><strong>Disconnect from the internet</strong> (turn off WiFi/ethernet)</li>
+                    <li>Wait for the status indicator to show "OFFLINE - Safe to Use"</li>
+                    <li>Now enter your <strong>Private Key</strong> in WIF format (starts with 5, K, or L)</li>
+                </ol>
+            </div>
+
+            <div class="instruction-section">
+                <h3>5. Create and Verify Transaction</h3>
+                <ol>
+                    <li>Click <strong>"Create Transaction"</strong></li>
+                    <li>Copy the generated transaction hex to clipboard</li>
+                    <li>Reconnect to the internet</li>
+                    <li>Go to the <strong>coinb.in/#verify</strong> tab</li>
+                    <li>Paste the transaction hex and click "Submit"</li>
+                    <li><strong>Verify</strong> that the destination address is correct</li>
+                    <li><strong>Verify</strong> that the amount is correct</li>
+                </ol>
+            </div>
+
+            <div class="instruction-section">
+                <h3>6. Broadcast Transaction</h3>
+                <ol>
+                    <li>If everything looks correct, go to <strong>mempool.space/tx/push</strong></li>
+                    <li>Paste the transaction hex</li>
+                    <li>Click "Broadcast Transaction"</li>
+                    <li>Your transaction should now be submitted to the Bitcoin network!</li>
+                </ol>
+            </div>
+
+            <div class="warning-box">
+                <strong>⚠️ Important Security Notes:</strong>
+                <ul>
+                    <li>Always verify the transaction details before broadcasting</li>
+                    <li>Never enter your private key while online</li>
+                    <li>Double-check the destination address</li>
+                    <li>Bitcoin transactions are irreversible once confirmed</li>
+                </ul>
             </div>
         </div>
     </div>
