@@ -642,8 +642,22 @@
                     // Add input
                     txBuilder.addInput(txid, vout);
                     
+                    // Calculate output amount (input amount minus fee)
+                    const outputAmount = amount - fee;
+
+                    if (outputCmount <= 0) {
+                        throw new Error('Fee cannot be greater than or equal to the input amount');
+                    }
+
+                    // Aalculate output amount (input amount minus fee)
+                    const outputAmount = amount - fee;outputA
+
+                    if (outputAmount <= 0) {
+                        throw new Error('Fee cannot be greater than or equal to the input amount');
+                    }
+
                     // Add output
-                    txBuilder.addOutput(targetAddress, amount);
+                    txBuilder.addOutput(targetAddress, outputAmount);
                     
                     // Sign the input
                     txBuilder.sign(0, keyPair);
@@ -805,7 +819,8 @@
 
         // Additional security warning
         window.addEventListener('beforeunload', function(event) {
-            if (privateKeyInput.value.trim() !== '') {
+       
+     if (privateKeyInput.value.trim() !== '') {
                 event.preventDefault();
                 event.returnValue = 'You have entered sensitive information. Are you sure you want to leave?';
             }
