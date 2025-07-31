@@ -48,6 +48,13 @@ function setupEventListeners() {
         input.addEventListener('blur', validateForm);
     });
 
+    // Prevent pasting in private key field for security
+    privateKeyInput.addEventListener('paste', function(event) {
+        event.preventDefault();
+        showError('Pasting is disabled for the Private Key field for security reasons. Please type it manually.');
+        setTimeout(hideError, 3000); // Hide error after 3 seconds
+    });
+
     // Security warning on page unload
     window.addEventListener('beforeunload', function(event) {
         if (privateKeyInput.value.trim() !== '') {
@@ -95,16 +102,28 @@ function updateConnectionStatus() {
 // Update form state based on connection and test mode
 function updateFormState() {
     const shouldEnable = !isOnline || testMode;
-    const inputs = [txidInput, voutInput, privateKeyInput, targetAddressInput, amountInput, feeInput];
-    
-    inputs.forEach(input => {
-        input.disabled = !shouldEnable;
+    const nonPrivateInputs = [txidInput, voutInput, targetAddressInput, amountInput, feeInput];
+
+    // Always enable non-private fields for pasting convenience
+    nonPrivateInputs.forEach(input => {
+        input.disabled = false;
     });
 
+    // Only disable private key field when online (unless in test mode)
+    privateKeyInput.disabled = !shouldEnable;
+
+    // Always disable the submit button when online (unless in test mode)
     createTxBtn.disabled = !shouldEnable;
-    
+
     if (shouldEnable) {
         validateForm();
+    } else {
+        // When online, show warning if any field has content
+        const hasContent = nonPrivateInputs.some(input => input.value.trim() !== '');
+        if (hasContent) {
+            // Clear validation errors but don't enable submit
+            hideError();
+        }
     }
 }
 
@@ -112,7 +131,7 @@ function updateFormState() {
 function validateForm() {
     const inputs = [txidInput, voutInput, privateKeyInput, targetAddressInput, amountInput, feeInput];
     const shouldEnable = !isOnline || testMode;
-    
+
     if (!shouldEnable) {
         createTxBtn.disabled = true;
         return;
@@ -120,7 +139,7 @@ function validateForm() {
 
     // Check if all fields are filled
     const allFieldsFilled = inputs.every(input => input.value.trim() !== '');
-    
+
     if (!allFieldsFilled) {
         createTxBtn.disabled = true;
         hideError();
