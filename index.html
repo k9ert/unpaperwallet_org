@@ -112,9 +112,7 @@
                 <h3>1. Prepare Your Browser Tabs</h3>
                 <p>Open these links in separate tabs before starting:</p>
                 <ul>
-                    <li><a href="https://mempool.space" target="_blank" rel="noopener">mempool.space</a> - To find your transaction details</li>
                     <li><a href="https://coinb.in/#verify" target="_blank" rel="noopener">coinb.in/#verify</a> - To verify your transactions (works offline once loaded)</li>
-                    <li><a href="https://mempool.space/tx/push" target="_blank" rel="noopener">mempool.space/tx/push</a> - To broadcast your transactions</li>
                 </ul>
                 <p><strong>Note:</strong> coinb.in/#verify will work offline after the page loads, allowing you to verify transactions while disconnected.</p>
             </div>
@@ -150,63 +148,38 @@
             </div>
 
             <div class="instruction-section">
-                <h3>4. Go Offline and Create ALL Transactions</h3>
+                <h3>4. Go Offline and Create, Verify & Broadcast ALL Transactions</h3>
                 <ol>
                     <li><strong>Disconnect from the internet</strong> (turn off WiFi/ethernet)</li>
                     <li>Wait for the status indicator to show "OFFLINE - Safe to Use"</li>
                     <li>Now <strong>type</strong> your <strong>Private Key</strong> in WIF format (starts with 5, K, or L)</li>
                     <li><em>Note: Pasting is disabled for the private key field for security</em></li>
-                    <li><strong>Create FIRST transaction:</strong>
+                    <li><strong>For EACH UTXO (starting with the first):</strong>
                         <ul>
                             <li>Click <strong>"Create Transaction"</strong></li>
-                            <li>Copy the generated transaction hex and save it (notepad/text file)</li>
-                        </ul>
-                    </li>
-                    <li><strong>For ADDITIONAL UTXOs (if any):</strong>
-                        <ul>
-                            <li>Clear the TxID, UTXO Index, and Amount fields</li>
-                            <li>Enter the next UTXO's details (keep same target address and private key)</li>
-                            <li>Click "Create Transaction" again</li>
-                            <li>Copy and save this transaction hex too</li>
-                            <li>Repeat for all remaining UTXOs</li>
-                        </ul>
-                    </li>
-                    <li><strong>⚠️ STAY OFFLINE</strong> until you've created transactions for ALL UTXOs!</li>
-                </ol>
-            </div>
-
-            <div class="instruction-section">
-                <h3>5. Verify ALL Transactions (While Still Offline)</h3>
-                <ol>
-                    <li><strong>⚠️ STAY OFFLINE</strong> - Do not reconnect to internet yet!</li>
-                    <li><strong>For EACH transaction hex you created:</strong>
-                        <ul>
                             <li>Go to the <strong>coinb.in/#verify</strong> tab (should still be open from step 1)</li>
                             <li>Paste the transaction hex and click "Submit"</li>
                             <li><strong>Verify</strong> that the destination address is correct</li>
                             <li><strong>Verify</strong> that the amount is correct</li>
-                            <li>If correct, save the verified transaction hex for broadcasting</li>
-                            <li>If incorrect, go back and recreate the transaction</li>
+                            <li>If correct, scan the transaction QR code with your mobile device</li>
+                            <li>On your mobile, go to mempool.space/tx/push and paste the transaction hex</li>
+                            <li>Broadcast the transaction and verify the funds go to the correct address</li>
+                            <li><strong>For ADDITIONAL UTXOs:</strong> Clear the TxID, UTXO Index, Amount, and Fee fields, enter the next UTXO's details and new target address (keep same private key), then repeat this process</li>
                         </ul>
                     </li>
-                    <li><strong>Only proceed to step 6 when ALL transactions are verified and correct!</strong></li>
+                    <li><strong>⚠️ STAY OFFLINE</strong> until you've created, verified, and broadcast transactions for ALL UTXOs!</li>
+                    <li><strong>Only proceed to step 5 when ALL transactions are broadcast and verified!</strong></li>
                 </ol>
             </div>
 
             <div class="instruction-section">
-                <h3>6. Reconnect and Broadcast ALL Transactions</h3>
+                <h3>5. Reconnect to Internet</h3>
                 <ol>
+                    <li><strong>Wait for ALL transactions to be confirmed</strong> before proceeding</li>
                     <li><strong>Now reconnect to the internet</strong> (turn WiFi/ethernet back on)</li>
-                    <li>Go to <strong>mempool.space/tx/push</strong></li>
-                    <li><strong>For EACH verified transaction:</strong>
-                        <ul>
-                            <li>Paste the transaction hex</li>
-                            <li>Click "Broadcast Transaction"</li>
-                            <li>Wait for confirmation before broadcasting the next one</li>
-                        </ul>
-                    </li>
-                    <li>All your UTXOs should now be spent and your Bitcoin moved to the new address!</li>
-                    <li><strong>⚠️ Your paper wallet is now EMPTY and should be considered compromised</strong></li>
+                    <li>All your UTXOs should now be spent and your Bitcoin moved to new addresses!</li>
+                    <li><strong>⚠️ Your paper wallet is now EMPTY and the private key is considered compromised</strong></li>
+                    <li>The paper wallet should be destroyed as it is no longer secure</li>
                 </ol>
             </div>
 
