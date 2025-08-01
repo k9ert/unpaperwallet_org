@@ -48,13 +48,6 @@ function setupEventListeners() {
         input.addEventListener('blur', validateForm);
     });
 
-    // Prevent pasting in private key field for security
-    privateKeyInput.addEventListener('paste', function(event) {
-        event.preventDefault();
-        showError('Pasting is disabled for the Private Key field for security reasons. Please type it manually.');
-        setTimeout(hideError, 3000); // Hide error after 3 seconds
-    });
-
     // Security warning on page unload
     window.addEventListener('beforeunload', function(event) {
         if (privateKeyInput.value.trim() !== '') {
