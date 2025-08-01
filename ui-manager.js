@@ -7,7 +7,7 @@ let isOnline = navigator.onLine;
 let testMode = false;
 
 // DOM elements
-let statusIndicator, statusText, testModeToggle, transactionForm, createTxBtn;
+let statusIndicator, statusText, testModeToggle, transactionForm, createTxBtn, scanPrivateKeyBtn;
 let txidInput, voutInput, privateKeyInput, targetAddressInput, amountInput, feeInput;
 
 // Initialize DOM references
@@ -17,6 +17,7 @@ function initializeUI() {
     testModeToggle = document.getElementById('test-mode');
     transactionForm = document.getElementById('transaction-form');
     createTxBtn = document.getElementById('create-tx-btn');
+    scanPrivateKeyBtn = document.getElementById('scan-private-key-btn');
 
     // Form inputs
     txidInput = document.getElementById('txid');
@@ -55,6 +56,9 @@ function setupEventListeners() {
             event.returnValue = 'You have entered sensitive information. Are you sure you want to leave?';
         }
     });
+
+    // QR scan button
+    scanPrivateKeyBtn.addEventListener('click', handleQRScan);
 }
 
 // Handle online status
@@ -107,6 +111,9 @@ function updateFormState() {
 
     // Always disable the submit button when online (unless in test mode)
     createTxBtn.disabled = !shouldEnable;
+
+    // Enable/disable scan button based on connection status
+    scanPrivateKeyBtn.disabled = !shouldEnable;
 
     if (shouldEnable) {
         validateForm();
@@ -162,6 +169,97 @@ function validateForm() {
     } catch (error) {
         createTxBtn.disabled = true;
         showError(`Validation error: ${error.message}`);
+    }
+}
+
+// Handle QR code scanning for private key
+async function handleQRScan() {
+    // Check if we have camera access
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        showError('Camera access not available in this browser');
+        return;
+    }
+
+    try {
+        // Dynamically import QrScanner
+        const { default: QrScanner } = await import('./qr-scanner.min.js');
+        
+        // Create video element for camera feed
+        const video = document.createElement('video');
+        video.style.width = '300px';
+        video.style.height = '300px';
+        
+        // Create modal for camera feed
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); display: flex; justify-content: center;
+            align-items: center; z-index: 1000;
+        `;
+        
+        const modalContent = document.createElement('div');
+        modalContent.style.cssText = `
+            background: white; padding: 20px; border-radius: 10px;
+            text-align: center;
+        `;
+        
+        const closeBtn = document.createElement('button');
+        closeBtn.textContent = 'Close';
+        closeBtn.style.cssText = 'margin-top: 10px; padding: 10px 20px;';
+        
+        const statusDiv = document.createElement('div');
+        statusDiv.textContent = 'Starting camera...';
+        statusDiv.style.cssText = 'margin-bottom: 10px; font-weight: bold;';
+        
+        modalContent.appendChild(statusDiv);
+        modalContent.appendChild(video);
+        modalContent.appendChild(closeBtn);
+        modal.appendChild(modalContent);
+        document.body.appendChild(modal);
+
+        // Initialize QR scanner
+        const qrScanner = new QrScanner(video, (result) => {
+            let qrData = null;
+            
+            // Handle different result formats
+            if (typeof result === 'string') {
+                qrData = result;
+            } else if (result && result.data) {
+                qrData = result.data;
+            } else if (result && result.text) {
+                qrData = result.text;
+            } else if (result && result.content) {
+                qrData = result.content;
+            }
+            
+            if (qrData && qrData.trim()) {
+                privateKeyInput.value = qrData.trim();
+                validateForm();
+                qrScanner.destroy();
+                document.body.removeChild(modal);
+                showSuccess('Private key scanned successfully!');
+                setTimeout(hideSuccess, 2000);
+            } else {
+                statusDiv.textContent = 'QR code detected but no data - keep trying...';
+                return;
+            }
+        });
+
+        // Set canvas optimization
+        qrScanner.setGrayscaleWeights(0.299, 0.587, 0.114, true);
+        qrScanner.setInversionMode('both');
+        
+        // Start the camera
+        qrScanner.start();
+        
+        // Add event listener to close button
+        closeBtn.addEventListener('click', () => {
+            qrScanner.destroy();
+            document.body.removeChild(modal);
+        });
+    } catch (error) {
+        showError('QR scanning failed: ' + error.message);
+        console.error('QR scan error:', error);
     }
 }
 

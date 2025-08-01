@@ -381,6 +381,22 @@ input:checked + .slider:before {
     font-weight: bold;
 }
 
+.input-with-button {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.input-with-button input {
+    flex: 1;
+}
+
+.scan-button {
+    white-space: nowrap;
+    padding: 8px 12px;
+    font-size: 14px;
+}
+
 @media (max-width: 1200px) {
     .main-content {
         flex-direction: column;
