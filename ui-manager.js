@@ -188,6 +188,9 @@ async function handleQRScan() {
         const video = document.createElement('video');
         video.style.width = '300px';
         video.style.height = '300px';
+        video.setAttribute('playsinline', true);
+        video.setAttribute('autoplay', true);
+        video.setAttribute('muted', true);
         
         // Create modal for camera feed
         const modal = document.createElement('div');
@@ -244,13 +247,14 @@ async function handleQRScan() {
                 return;
             }
         });
-
+        
         // Set canvas optimization
         qrScanner.setGrayscaleWeights(0.299, 0.587, 0.114, true);
         qrScanner.setInversionMode('both');
         
         // Start the camera
-        qrScanner.start();
+        await qrScanner.start();
+        statusDiv.textContent = 'Camera ready - point at QR code';
         
         // Add event listener to close button
         closeBtn.addEventListener('click', () => {
