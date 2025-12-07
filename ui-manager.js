@@ -181,9 +181,7 @@ async function handleQRScan() {
     }
 
     try {
-        // Configure QR scanner worker path
-        QrScanner.WORKER_PATH = './qr-scanner-worker.min.js';
-
+        // QrScanner is loaded globally via qr-scanner-wrapper.js module
         // Create video element for camera feed
         const video = document.createElement('video');
         video.style.width = '300px';
