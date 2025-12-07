@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bitcoin Paper Wallet Transaction Creator</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Bitcoin Paper Wallet Transaction Creator</h1>
+            <div id="status-indicator" class="status-indicator">
+                <span id="status-text">Checking connection...</span>
+            </div>
+        </div>
+
+        <div class="warning">
+            <h3>⚠️ DISCLAIMER</h3>
+            <p><strong>USE AT YOUR OWN RISK:</strong> The author of this webpage is not responsible for any loss of funds,
+            damages, or any other consequences resulting from the use of this application. This software is provided
+            "as is" without warranty of any kind. Users are solely responsible for verifying transaction details,
+            securing their private keys, and understanding the risks involved in Bitcoin transactions.
+            <strong>Bitcoin transactions are irreversible.</strong> Always test with small amounts first.</p>
+        </div>
+
+        <div class="flex-container">
+            <label for="test-mode">Test Mode:</label>
+            <label class="toggle-switch">
+                <input type="checkbox" id="test-mode">
+                <span class="slider"></span>
+            </label>
+            <span class="warning" style="margin: 0; padding: 5px 10px; font-size: 12px;">
+                Enable only for development testing
+            </span>
+        </div>
+
+        <div class="warning">
+            <strong>⚠️ SECURITY WARNING:</strong> This application should only be used offline for maximum security.
+            You can fill in transaction details while online, but disconnect from the internet before entering your private key.
+            The private key field and submit button are disabled when online to prevent accidental exposure of sensitive information.
+        </div>
+
+        <div id="error-message" class="error hidden"></div>
+        <div id="success-message" class="success hidden"></div>
+
+        <div class="main-content">
+            <div class="form-column">
+                <h2>Transaction Form</h2>
+                <div class="form-info">
+                    <strong>📝 Note:</strong> If you have multiple UTXOs, create one transaction at a time while offline,
+                    then verify all transactions before broadcasting.
+                </div>
+
+        <form id="transaction-form">
+            <div class="form-group">
+                <label for="txid">Transaction ID (TXid):</label>
+                <input type="text" id="txid" placeholder="Enter the transaction ID of the UTXO (64 hex characters)" disabled>
+            </div>
+
+            <div class="form-group">
+                <label for="vout">UTXO Index (vout):</label>
+                <input type="number" id="vout" placeholder="Enter the index of the UTXO within the transaction" min="0" disabled>
+            </div>
+
+            <div class="form-group">
+                <label for="private-key">Private Key (WIF format):</label>
+                <div class="input-with-button">
+                    <input type="text" id="private-key" placeholder="Type or paste your private key starting with 5, K, or L" disabled>
+                    <button type="button" class="button scan-button" id="scan-private-key-btn" disabled>Scan QR</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="target-address">Target Address:</label>
+                <input type="text" id="target-address" placeholder="Enter Bitcoin address (legacy 1..., script 3..., or native segwit bc1...)" disabled>
+            </div>
+
+            <div class="form-group">
+                <label for="amount">Amount (satoshis):</label>
+                <input type="number" id="amount" placeholder="Enter amount in satoshis" min="1" disabled>
+            </div>
+
+            <div class="form-group">
+                <label for="fee">Transaction Fee (satoshis):</label>
+                <input type="number" id="fee" placeholder="Enter transaction fee in satoshis" min="1" value="1000" disabled>
+            </div>
+
+                <button type="submit" class="button" id="create-tx-btn" disabled>Create Transaction</button>
+            </form>
+
+            <div id="transaction-output" class="transaction-output hidden">
+                <h3>Transaction Created Successfully</h3>
+                <div class="form-group">
+                    <label for="tx-hex">Transaction Hex:</label>
+                    <div class="transaction-hex" id="tx-hex"></div>
+                    <button type="button" class="button copy-button" onclick="copyToClipboard('tx-hex')">Copy Transaction</button>
+                </div>
+
+                <div class="qr-code">
+                    <h4>QR Code:</h4>
+                    <div class="qr-placeholder" id="qr-placeholder">
+                        QR code functionality requires external library<br>
+                        Use the transaction hex above to broadcast
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="instructions-column">
+            <h2>Step-by-Step Instructions</h2>
+
+            <div class="instruction-section">
+                <h3>1. Prepare Your Browser Tabs</h3>
+                <p>Open these links in separate tabs before starting:</p>
+                <ul>
+                    <li><a href="https://coinb.in/#verify" target="_blank" rel="noopener">coinb.in/#verify</a> - To verify your transactions (works offline once loaded)</li>
+                </ul>
+                <p><strong>Note:</strong> coinb.in/#verify will work offline after the page loads, allowing you to verify transactions while disconnected.</p>
+            </div>
+
+            <div class="instruction-section">
+                <h3>2. Find Your Transaction Details</h3>
+                <ol>
+                    <li>Go to <strong>mempool.space</strong></li>
+                    <li>Search for your <strong>Bitcoin address</strong> (not individual transactions)</li>
+                    <li><strong>⚠️ IMPORTANT:</strong> You must spend <strong>ALL UTXOs</strong> from this address for security!</li>
+                    <li>Note down <strong>ALL unspent transactions</strong> showing for your address</li>
+                    <li>For each UTXO, record:
+                        <ul>
+                            <li><strong>Transaction ID (TxID)</strong> - 64-character hex string</li>
+                            <li><strong>UTXO Index</strong> (vout) - usually 0 or 1</li>
+                            <li><strong>Amount</strong> in satoshis</li>
+                        </ul>
+                    </li>
+                </ol>
+            </div>
+
+            <div class="instruction-section">
+                <h3>3. Prepare Transaction Details for FIRST UTXO (While Online)</h3>
+                <ol>
+                    <li><strong>Paste</strong> the <strong>first Transaction ID</strong> into the TxID field</li>
+                    <li>Enter the corresponding <strong>UTXO Index</strong> (vout)</li>
+                    <li><strong>Paste</strong> your <strong>Target Address</strong> (where you want to send the Bitcoin)</li>
+                    <li>Enter the <strong>Amount</strong> for this UTXO in satoshis (1 BTC = 100,000,000 satoshis)</li>
+                    <li>Set the <strong>Transaction Fee</strong> (default 1000 satoshis is usually fine)</li>
+                    <li><strong>Note:</strong> You can paste into all fields except the private key field</li>
+                    <li><strong>DO NOT</strong> enter your private key yet!</li>
+                </ol>
+            </div>
+
+            <div class="instruction-section">
+                <h3>4. Go Offline and Create, Verify & Broadcast ALL Transactions</h3>
+                <ol>
+                    <li><strong>Disconnect from the internet</strong> (turn off WiFi/ethernet)</li>
+                    <li>Wait for the status indicator to show "OFFLINE - Safe to Use"</li>
+                    <li>Sometimes VPN provider might interfere the detection. Disable VPN if necessary.</li>
+                    <li>Now <strong>type</strong> your <strong>Private Key</strong> in WIF format (starts with 5, K, or L)</li>
+                    <li><em>Note: Pasting is disabled for the private key field for security</em></li>
+                    <li><strong>For EACH UTXO (starting with the first):</strong>
+                        <ul>
+                            <li>Click <strong>"Create Transaction"</strong></li>
+                            <li>Go to the <strong>coinb.in/#verify</strong> tab (should still be open from step 1)</li>
+                            <li>Paste the transaction hex and click "Submit"</li>
+                            <li><strong>Verify</strong> that the destination address is correct</li>
+                            <li><strong>Verify</strong> that the amount is correct</li>
+                            <li>If correct, scan the transaction QR code with your mobile device</li>
+                            <li>On your mobile, go to mempool.space/tx/push and paste the transaction hex</li>
+                            <li>Broadcast the transaction and verify the funds go to the correct address</li>
+                            <li><strong>For ADDITIONAL UTXOs:</strong> Clear the TxID, UTXO Index, Amount, and Fee fields, enter the next UTXO's details and new target address (keep same private key), then repeat this process</li>
+                        </ul>
+                    </li>
+                    <li><strong>⚠️ STAY OFFLINE</strong> until you've created, verified, and broadcast transactions for ALL UTXOs!</li>
+                    <li><strong>Only proceed to step 5 when ALL transactions are broadcast and verified!</strong></li>
+                </ol>
+            </div>
+
+            <div class="instruction-section">
+                <h3>5. Reconnect to Internet</h3>
+                <ol>
+                    <li><strong>Wait for ALL transactions to be confirmed</strong> before proceeding</li>
+                    <li><strong>Now reconnect to the internet</strong> (turn WiFi/ethernet back on)</li>
+                    <li>All your UTXOs should now be spent and your Bitcoin moved to new addresses!</li>
+                    <li><strong>⚠️ Your paper wallet is now EMPTY and the private key is considered compromised</strong></li>
+                    <li>The paper wallet should be destroyed as it is no longer secure</li>
+                </ol>
+            </div>
+
+            <div class="critical-warning">
+                <strong>🚨 CRITICAL: Paper Wallet Security Workflow</strong>
+                <p><strong>You MUST spend ALL UTXOs from your paper wallet address in one offline session!</strong></p>
+                <ul>
+                    <li><strong>Why?</strong> Once you enter your private key on any device, the wallet is considered "hot" and potentially compromised</li>
+                    <li><strong>Never leave UTXOs</strong> on a paper wallet after using the private key</li>
+                    <li><strong>Correct workflow:</strong> Go offline → Create ALL transactions → Verify ALL transactions → Go online → Broadcast ALL transactions</li>
+                    <li><strong>If you have multiple UTXOs,</strong> you must create separate transactions for each one while staying offline</li>
+                    <li><strong>Verify transactions offline</strong> using coinb.in before reconnecting to internet</li>
+                    <li><strong>After broadcasting all transactions,</strong> your paper wallet is empty and should be destroyed</li>
+                </ul>
+            </div>
+
+            <div class="warning-box">
+                <strong>⚠️ Important Security Notes:</strong>
+                <ul>
+                    <li>Always verify the transaction details before broadcasting</li>
+                    <li>Never enter your private key while online</li>
+                    <li>Private key field has pasting disabled for security - type it manually</li>
+                    <li>Double-check the destination address</li>
+                    <li>Bitcoin transactions are irreversible once confirmed</li>
+                </ul>
+            </div>
+
+            <div class="disclaimer-footer">
+                <strong>FINAL REMINDER:</strong> This tool is provided without any warranty or guarantee.
+                The author assumes no responsibility for any losses or damages. Use at your own risk and
+                always verify everything before broadcasting transactions.
+            </div>
+        </div>
+    </div>
+
+    <!-- Local Bitcoin Library -->
+    <script src="vendor/bitcoinjs-lib.min.js"></script>
+    <script src="vendor/qrcode.min.js"></script>
+
+    <!-- QR Scanner (ES6 module wrapper) -->
+    <script type="module" src="js/qr-scanner-wrapper.js"></script>
+
+    <!-- Application modules -->
+    <script src="js/utils.js"></script>
+    <script src="js/bitcoin-transaction.js"></script>
+    <script src="js/ui-manager.js"></script>
+
+    <script>
+        // Global bitcoin variable
+        let bitcoin = window.bitcoin;
+
+        // Initialize the application when DOM is loaded
+        document.addEventListener('DOMContentLoaded', initializeApp);
+    </script>
+</body>
+</html>
