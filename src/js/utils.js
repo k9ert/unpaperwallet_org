@@ -148,13 +148,99 @@ function validateFee(fee) {
     return feeNum;
 }
 
+// Fetch UTXOs from Blockstream Esplora API
+async function fetchUTXOs(address, isTestnet = false, useMockData = false) {
+    // Validate address format first
+    try {
+        validateBitcoinAddress(address);
+    } catch (error) {
+        throw new Error(`Invalid address: ${error.message}`);
+    }
+
+    // Mock mode - load from fixtures
+    if (useMockData && typeof window.mockUtxoResponses !== 'undefined') {
+        return new Promise((resolve, reject) => {
+            setTimeout(() => {
+                // Find matching mock data by address
+                const mockData = Object.values(window.mockUtxoResponses)
+                    .find(m => m.address === address);
+
+                if (mockData) {
+                    resolve(mockData.data);
+                } else {
+                    // Use default mock response
+                    resolve(window.mockUtxoResponses.singleUtxo.data);
+                }
+            }, 500); // Simulate network delay
+        });
+    }
+
+    const network = isTestnet ? 'testnet/api' : 'api';
+    const url = `https://blockstream.info/${network}/address/${address}/utxo`;
+
+    try {
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: { 'Accept': 'application/json' },
+            signal: AbortSignal.timeout(10000) // 10 second timeout
+        });
+
+        if (!response.ok) {
+            if (response.status === 404) {
+                throw new Error('Address not found or has no UTXOs');
+            }
+            throw new Error(`API error: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+
+        // Validate response is array
+        if (!Array.isArray(data)) {
+            throw new Error('Invalid API response format');
+        }
+
+        // Validate each UTXO
+        data.forEach((utxo, index) => {
+            if (!utxo.txid || typeof utxo.txid !== 'string' || utxo.txid.length !== 64) {
+                throw new Error(`Invalid txid at index ${index}`);
+            }
+            if (typeof utxo.vout !== 'number' || utxo.vout < 0) {
+                throw new Error(`Invalid vout at index ${index}`);
+            }
+            if (typeof utxo.value !== 'number' || utxo.value <= 0) {
+                throw new Error(`Invalid value at index ${index}`);
+            }
+            if (!utxo.status || typeof utxo.status !== 'object') {
+                throw new Error(`Invalid status at index ${index}`);
+            }
+        });
+
+        return data;
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            throw new Error('Request timeout - API took too long to respond');
+        }
+        throw error;
+    }
+}
+
+// Format satoshis with thousands separators
+function formatSatoshis(sats) {
+    return sats.toLocaleString('en-US');
+}
+
+// Shorten txid for display (first 8...last 8 chars)
+function shortenTxid(txid) {
+    return `${txid.substring(0, 8)}...${txid.substring(56)}`;
+}
+
 // Test Bitcoin library functionality
 function testBitcoinLibrary() {
     if (typeof bitcoin === 'undefined') {
         console.error('Bitcoin library not loaded');
         return;
     }
-    
+
     console.log('Bitcoin library methods available:');
     console.log('- address:', typeof bitcoin.address);
     console.log('- payments:', typeof bitcoin.payments);
@@ -164,22 +250,22 @@ function testBitcoinLibrary() {
     console.log('- ECPair:', typeof bitcoin.ECPair);
     console.log('- networks:', typeof bitcoin.networks);
     console.log('- script:', typeof bitcoin.script);
-    
+
     // Test basic functionality
     try {
         // Test address validation
         const testAddress = '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2';
         const outputScript = bitcoin.address.toOutputScript(testAddress);
         console.log('✓ Address validation works');
-        
+
         // Test PSBT creation
         const psbt = new bitcoin.Psbt();
         console.log('✓ PSBT creation works');
-        
+
         // Test network access
         const network = bitcoin.networks.bitcoin;
         console.log('✓ Network access works');
-        
+
         console.log('Bitcoin library integration test: PASSED');
     } catch (error) {
         console.error('Bitcoin library integration test: FAILED', error);

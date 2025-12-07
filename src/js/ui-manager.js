@@ -5,16 +5,20 @@
 // Global state variables
 let isOnline = navigator.onLine;
 let testMode = false;
+let mockDataMode = false;
+let currentUtxos = [];
 
 // DOM elements
-let statusIndicator, statusText, testModeToggle, transactionForm, createTxBtn, scanPrivateKeyBtn;
+let statusIndicator, statusText, testModeToggle, mockDataModeToggle, transactionForm, createTxBtn, scanPrivateKeyBtn;
 let txidInput, voutInput, privateKeyInput, targetAddressInput, amountInput, feeInput;
+let sourceAddressInput, fetchUtxosBtn, utxoListDiv, fetchErrorDiv;
 
 // Initialize DOM references
 function initializeUI() {
     statusIndicator = document.getElementById('status-indicator');
     statusText = document.getElementById('status-text');
     testModeToggle = document.getElementById('test-mode');
+    mockDataModeToggle = document.getElementById('mock-data-mode');
     transactionForm = document.getElementById('transaction-form');
     createTxBtn = document.getElementById('create-tx-btn');
     scanPrivateKeyBtn = document.getElementById('scan-private-key-btn');
@@ -26,6 +30,12 @@ function initializeUI() {
     targetAddressInput = document.getElementById('target-address');
     amountInput = document.getElementById('amount');
     feeInput = document.getElementById('fee');
+
+    // UTXO fetcher elements
+    sourceAddressInput = document.getElementById('source-address');
+    fetchUtxosBtn = document.getElementById('fetch-utxos-btn');
+    utxoListDiv = document.getElementById('utxo-list');
+    fetchErrorDiv = document.getElementById('fetch-error');
 }
 
 // Setup event listeners
@@ -36,6 +46,11 @@ function setupEventListeners() {
 
     // Test mode toggle
     testModeToggle.addEventListener('change', handleTestModeToggle);
+
+    // Mock data mode toggle
+    if (mockDataModeToggle) {
+        mockDataModeToggle.addEventListener('change', handleMockDataModeToggle);
+    }
 
     // Form submission
     transactionForm.addEventListener('submit', (event) => {
@@ -59,6 +74,9 @@ function setupEventListeners() {
 
     // QR scan button
     scanPrivateKeyBtn.addEventListener('click', handleQRScan);
+
+    // UTXO fetcher button
+    fetchUtxosBtn.addEventListener('click', handleFetchUtxos);
 }
 
 // Handle online status
@@ -80,6 +98,12 @@ function handleTestModeToggle() {
     testMode = testModeToggle.checked;
     updateConnectionStatus();
     updateFormState();
+}
+
+// Handle mock data mode toggle
+function handleMockDataModeToggle() {
+    mockDataMode = mockDataModeToggle.checked;
+    updateConnectionStatus();
 }
 
 // Update connection status display
@@ -105,6 +129,12 @@ function updateFormState() {
     nonPrivateInputs.forEach(input => {
         input.disabled = false;
     });
+
+    // Always enable source address input for convenience
+    sourceAddressInput.disabled = false;
+
+    // Fetch button only works when online (or in test mode)
+    fetchUtxosBtn.disabled = !isOnline && !testMode;
 
     // Only disable private key field when online (unless in test mode)
     privateKeyInput.disabled = !shouldEnable;
@@ -265,25 +295,179 @@ async function handleQRScan() {
     }
 }
 
+// Handle UTXO fetching
+async function handleFetchUtxos() {
+    const address = sourceAddressInput.value.trim();
+
+    if (!address) {
+        showFetchError('Please enter a Bitcoin address');
+        return;
+    }
+
+    hideFetchError();
+    hideError();
+    hideSuccess();
+
+    // Show loading state
+    const originalText = fetchUtxosBtn.textContent;
+    fetchUtxosBtn.disabled = true;
+    fetchUtxosBtn.textContent = 'Fetching...';
+
+    try {
+        // Fetch UTXOs from API (or mock data)
+        const utxos = await fetchUTXOs(address, testMode, mockDataMode);
+
+        if (utxos.length === 0) {
+            showFetchError('No UTXOs found for this address');
+            utxoListDiv.classList.add('hidden');
+            currentUtxos = [];
+        } else {
+            currentUtxos = utxos;
+            displayUtxoList(utxos);
+            showSuccess(`Found ${utxos.length} UTXO${utxos.length > 1 ? 's' : ''}${mockDataMode ? ' (mock data)' : ''}`);
+            setTimeout(hideSuccess, 3000);
+        }
+    } catch (error) {
+        showFetchError(`Error fetching UTXOs: ${error.message}`);
+        utxoListDiv.classList.add('hidden');
+        currentUtxos = [];
+    } finally {
+        // Restore button state
+        fetchUtxosBtn.disabled = !isOnline && !testMode;
+        fetchUtxosBtn.textContent = originalText;
+    }
+}
+
+// Display UTXO list in table format
+function displayUtxoList(utxos) {
+    // Calculate total value
+    const totalValue = utxos.reduce((sum, utxo) => sum + utxo.value, 0);
+
+    // Generate table HTML
+    let html = `
+        <h3>Found ${utxos.length} UTXO${utxos.length > 1 ? 's' : ''} (Total: ${formatSatoshis(totalValue)} sats)</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Select</th>
+                    <th>TxID</th>
+                    <th>Index</th>
+                    <th>Amount (sats)</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    utxos.forEach((utxo, index) => {
+        const isConfirmed = utxo.status.confirmed;
+        const statusText = isConfirmed ? 'Confirmed' : 'Unconfirmed';
+        const statusClass = isConfirmed ? 'status-confirmed' : 'status-unconfirmed';
+
+        html += `
+            <tr class="utxo-row" data-index="${index}">
+                <td><input type="radio" name="utxo-select" value="${index}"></td>
+                <td class="txid-short" title="${utxo.txid}">${shortenTxid(utxo.txid)}</td>
+                <td>${utxo.vout}</td>
+                <td>${formatSatoshis(utxo.value)}</td>
+                <td class="${statusClass}">${statusText}</td>
+            </tr>
+        `;
+    });
+
+    html += `
+            </tbody>
+        </table>
+        <button type="button" class="button button-success" id="use-selected-utxo-btn">
+            Use Selected UTXO
+        </button>
+    `;
+
+    utxoListDiv.innerHTML = html;
+    utxoListDiv.classList.remove('hidden');
+
+    // Attach event handlers
+    const rows = utxoListDiv.querySelectorAll('.utxo-row');
+    rows.forEach(row => {
+        row.addEventListener('click', function() {
+            const radio = this.querySelector('input[type="radio"]');
+            radio.checked = true;
+
+            // Remove selected class from all rows
+            rows.forEach(r => r.classList.remove('selected'));
+            // Add selected class to this row
+            this.classList.add('selected');
+        });
+    });
+
+    // Attach handler to "Use Selected" button
+    const useBtn = document.getElementById('use-selected-utxo-btn');
+    useBtn.addEventListener('click', handleUseSelectedUtxo);
+}
+
+// Handle using selected UTXO
+function handleUseSelectedUtxo() {
+    const selectedRadio = utxoListDiv.querySelector('input[name="utxo-select"]:checked');
+
+    if (!selectedRadio) {
+        showFetchError('Please select a UTXO first');
+        return;
+    }
+
+    const index = parseInt(selectedRadio.value);
+    const utxo = currentUtxos[index];
+
+    // Auto-fill form fields
+    txidInput.value = utxo.txid;
+    voutInput.value = utxo.vout;
+    amountInput.value = utxo.value;
+
+    // Validate the form
+    validateForm();
+
+    // Scroll to transaction form
+    const formHeading = document.querySelector('.form-column h2:nth-of-type(2)');
+    if (formHeading) {
+        formHeading.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // Show success message
+    showSuccess(`UTXO selected: ${formatSatoshis(utxo.value)} sats from ${shortenTxid(utxo.txid)}`);
+    setTimeout(hideSuccess, 5000);
+
+    hideFetchError();
+}
+
+// Show fetch error
+function showFetchError(message) {
+    fetchErrorDiv.textContent = message;
+    fetchErrorDiv.classList.remove('hidden');
+}
+
+// Hide fetch error
+function hideFetchError() {
+    fetchErrorDiv.classList.add('hidden');
+}
+
 // Initialize the application
 function initializeApp() {
     console.log('Application initialized');
-    
+
     // Re-assign bitcoin in case it wasn't loaded when declared
     if (typeof window.bitcoin !== 'undefined') {
         bitcoin = window.bitcoin;
     }
-    
+
     console.log('Bitcoin library loaded:', typeof bitcoin !== 'undefined');
     console.log('QRCode library loaded:', typeof QRCode !== 'undefined');
-    
+
     // Test Bitcoin library functionality
     testBitcoinLibrary();
-    
+
     // Initialize UI components
     initializeUI();
     initializeUtils();
-    
+
     updateConnectionStatus();
     setupEventListeners();
     updateFormState();

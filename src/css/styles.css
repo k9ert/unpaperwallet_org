@@ -397,6 +397,86 @@ input:checked + .slider:before {
     font-size: 14px;
 }
 
+/* UTXO Fetcher Section */
+.utxo-fetcher-section {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+    border: 2px solid #dee2e6;
+}
+
+.form-info {
+    background: #e7f3ff;
+    border-left: 4px solid #007bff;
+    padding: 12px 15px;
+    margin-bottom: 20px;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.utxo-list {
+    margin-top: 20px;
+    background: white;
+    padding: 15px;
+    border-radius: 5px;
+}
+
+.utxo-list h3 {
+    margin-top: 0;
+    color: #2c3e50;
+    font-size: 16px;
+}
+
+.utxo-list table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 15px 0;
+}
+
+.utxo-list th,
+.utxo-list td {
+    padding: 10px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+.utxo-list th {
+    background-color: #f0f0f0;
+    font-weight: bold;
+    font-size: 13px;
+    text-transform: uppercase;
+}
+
+.utxo-row {
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.utxo-row:hover {
+    background-color: #f5f5f5;
+}
+
+.utxo-row.selected {
+    background-color: #e3f2fd;
+}
+
+.txid-short {
+    font-family: monospace;
+    font-size: 12px;
+    color: #495057;
+}
+
+.status-confirmed {
+    color: #28a745;
+    font-weight: bold;
+}
+
+.status-unconfirmed {
+    color: #ffc107;
+    font-weight: bold;
+}
+
 @media (max-width: 1200px) {
     .main-content {
         flex-direction: column;
@@ -405,6 +485,21 @@ input:checked + .slider:before {
     .form-column,
     .instructions-column {
         min-width: auto;
+    }
+}
+
+@media (max-width: 768px) {
+    .utxo-list table {
+        font-size: 12px;
+    }
+
+    .utxo-list th,
+    .utxo-list td {
+        padding: 8px 5px;
+    }
+
+    .txid-short {
+        font-size: 10px;
     }
 }
 

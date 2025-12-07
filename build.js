@@ -109,6 +109,16 @@ function build() {
       fileCount++;
     }
 
+    // Copy test-data for mock mode
+    const testDataPath = path.join(__dirname, 'test-data');
+    if (fs.existsSync(testDataPath)) {
+      log('\n📝 Copying test-data...', 'yellow');
+      const testDataDest = path.join(DIST_DIR, 'test-data');
+      copyRecursive(testDataPath, testDataDest);
+      const testDataFiles = fs.readdirSync(testDataPath, { recursive: true });
+      fileCount += testDataFiles.length;
+    }
+
     const duration = Date.now() - startTime;
 
     // Success report
