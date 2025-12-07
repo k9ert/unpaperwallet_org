@@ -9,7 +9,7 @@ let mockDataMode = false;
 let currentUtxos = [];
 
 // DOM elements
-let statusIndicator, statusText, testModeToggle, mockDataModeToggle, transactionForm, createTxBtn, scanPrivateKeyBtn;
+let statusIndicator, statusText, testModeToggle, mockDataModeToggle, mockModeContainer, transactionForm, createTxBtn, scanPrivateKeyBtn;
 let txidInput, voutInput, privateKeyInput, targetAddressInput, amountInput, feeInput;
 let sourceAddressInput, fetchUtxosBtn, utxoListDiv, fetchErrorDiv;
 
@@ -19,6 +19,7 @@ function initializeUI() {
     statusText = document.getElementById('status-text');
     testModeToggle = document.getElementById('test-mode');
     mockDataModeToggle = document.getElementById('mock-data-mode');
+    mockModeContainer = document.getElementById('mock-mode-container');
     transactionForm = document.getElementById('transaction-form');
     createTxBtn = document.getElementById('create-tx-btn');
     scanPrivateKeyBtn = document.getElementById('scan-private-key-btn');
@@ -96,6 +97,18 @@ function handleOffline() {
 // Handle test mode toggle
 function handleTestModeToggle() {
     testMode = testModeToggle.checked;
+
+    // Show/hide mock mode toggle based on test mode
+    if (mockModeContainer) {
+        mockModeContainer.style.display = testMode ? 'flex' : 'none';
+
+        // Reset mock mode when hiding
+        if (!testMode && mockDataMode) {
+            mockDataModeToggle.checked = false;
+            mockDataMode = false;
+        }
+    }
+
     updateConnectionStatus();
     updateFormState();
 }
