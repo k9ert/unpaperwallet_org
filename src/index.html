@@ -60,7 +60,7 @@
                 <div class="utxo-fetcher-section">
                     <h2>1. Fetch UTXOs (Optional - Online Only)</h2>
                     <div class="form-info">
-                        <strong>💡 Tip:</strong> Auto-fetch your UTXOs or manually enter them below.
+                        <strong>💡 Tip:</strong> Auto-fetch your UTXOs using Blockstream Esplora API or manually enter them below.
                     </div>
 
                     <div class="form-group">
@@ -152,8 +152,20 @@
 
             <div class="instruction-section">
                 <h3>2. Find Your Transaction Details</h3>
+
+                <p><strong>📱 Option A: Auto-Fetch (Recommended - Easier)</strong></p>
                 <ol>
-                    <li>Go to <strong>mempool.space</strong></li>
+                    <li>Use the <strong>"Fetch UTXOs"</strong> feature at the top of the form (Step 1)</li>
+                    <li>Enter your Bitcoin address and click "Fetch UTXOs"</li>
+                    <li>The app uses <strong>Blockstream Esplora API</strong> to automatically retrieve all UTXOs</li>
+                    <li><strong>⚠️ IMPORTANT:</strong> You must spend <strong>ALL UTXOs</strong> from this address for security!</li>
+                    <li>Click on each UTXO to auto-fill the transaction form</li>
+                    <li>Note: This requires internet connection (you'll go offline before entering private key)</li>
+                </ol>
+
+                <p><strong>🔍 Option B: Manual Lookup (Alternative)</strong></p>
+                <ol>
+                    <li>Go to <strong>mempool.space</strong> or <strong>blockstream.info</strong></li>
                     <li>Search for your <strong>Bitcoin address</strong> (not individual transactions)</li>
                     <li><strong>⚠️ IMPORTANT:</strong> You must spend <strong>ALL UTXOs</strong> from this address for security!</li>
                     <li>Note down <strong>ALL unspent transactions</strong> showing for your address</li>
