@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UTXO Fixtures Test Demo</title>
+  <style>
+    body {
+      font-family: 'Courier New', monospace;
+      max-width: 1200px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #1e1e1e;
+      color: #d4d4d4;
+    }
+    h1 { color: #4ec9b0; }
+    h2 { color: #569cd6; margin-top: 30px; }
+    pre {
+      background: #2d2d2d;
+      padding: 15px;
+      border-radius: 5px;
+      overflow-x: auto;
+      border-left: 3px solid #4ec9b0;
+    }
+    .success { color: #4ec9b0; }
+    .info { color: #9cdcfe; }
+    .warning { color: #ce9178; }
+    code { color: #ce9178; }
+    .test-section {
+      margin: 20px 0;
+      padding: 15px;
+      background: #252526;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧪 UTXO Test Fixtures Demo</h1>
+  <p class="info">Open browser console to interact with test fixtures.</p>
+
+  <div class="test-section">
+    <h2>Available Globals</h2>
+    <pre>window.mockUtxoResponses     // All mock UTXO scenarios
+window.testAddresses         // Real test addresses
+window.errorScenarios        // Error test cases
+window.validationTestCases   // Address validation examples
+window.generateMockUtxos()   // Helper to generate mock data</pre>
+  </div>
+
+  <div class="test-section">
+    <h2>Try These Commands in Console</h2>
+    <pre><span class="warning">// View all mock scenarios</span>
+Object.keys(mockUtxoResponses)
+
+<span class="warning">// Get single UTXO data</span>
+mockUtxoResponses.singleUtxo
+
+<span class="warning">// Get multiple UTXOs</span>
+mockUtxoResponses.multipleUtxos
+
+<span class="warning">// Generate 10 random UTXOs</span>
+generateMockUtxos(10)
+
+<span class="warning">// Test address lookup</span>
+getMockResponseForAddress('1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa')
+
+<span class="warning">// View test addresses</span>
+testAddresses.mainnet
+testAddresses.testnet.faucets
+
+<span class="warning">// View error scenarios</span>
+errorScenarios.mockApiErrors</pre>
+  </div>
+
+  <div id="output"></div>
+
+  <script type="module">
+    import fixtures from './utxo-fixtures.js';
+
+    const output = document.getElementById('output');
+
+    // Display loaded fixtures
+    const testResults = `
+<div class="test-section">
+  <h2 class="success">✓ Fixtures Loaded Successfully</h2>
+  <pre><span class="success">Mock Scenarios:</span> ${Object.keys(fixtures.mockUtxoResponses).join(', ')}
+
+<span class="success">Mock API Responses:</span>
+  • singleUtxo: ${fixtures.mockUtxoResponses.singleUtxo.data.length} UTXO(s)
+  • multipleUtxos: ${fixtures.mockUtxoResponses.multipleUtxos.data.length} UTXO(s)
+  • unconfirmedUtxo: ${fixtures.mockUtxoResponses.unconfirmedUtxo.data.length} UTXO(s) (unconfirmed)
+  • noUtxos: ${fixtures.mockUtxoResponses.noUtxos.data.length} UTXO(s) (empty)
+  • manyUtxos: ${fixtures.mockUtxoResponses.manyUtxos.data.length} UTXO(s) (stress test)
+  • testnetUtxo: ${fixtures.mockUtxoResponses.testnetUtxo.data.length} UTXO(s) (testnet)
+
+<span class="success">Test Addresses:</span>
+  • Mainnet: ${Object.keys(fixtures.testAddresses.mainnet).length} addresses
+  • Testnet: ${Object.keys(fixtures.testAddresses.testnet).length - 1} addresses
+  • Testnet Faucets: ${fixtures.testAddresses.testnet.faucets.length} links
+
+<span class="success">Validation Cases:</span>
+  • Valid address types: ${Object.keys(fixtures.validationTestCases.validAddresses).length}
+  • Invalid examples: ${fixtures.validationTestCases.invalidAddresses.length}
+
+<span class="success">Error Scenarios:</span>
+  • Invalid addresses: ${fixtures.errorScenarios.invalidAddresses.length}
+  • Mock API errors: ${Object.keys(fixtures.errorScenarios.mockApiErrors).length}
+
+<span class="success">Helper Functions:</span>
+  • generateMockUtxos(count) - Generate N mock UTXOs
+  • getMockResponseForAddress(address) - Lookup mock data
+  • isValidTestAddress(address) - Validate against test cases
+  • isInvalidTestAddress(address) - Check if known invalid
+</pre>
+</div>
+    `;
+
+    output.innerHTML = testResults;
+
+    console.log('%c✓ UTXO Test Fixtures Loaded', 'color: #4ec9b0; font-size: 16px; font-weight: bold;');
+    console.log('%cAvailable globals:', 'color: #569cd6; font-weight: bold;');
+    console.log('  • mockUtxoResponses');
+    console.log('  • testAddresses');
+    console.log('  • errorScenarios');
+    console.log('  • validationTestCases');
+    console.log('  • generateMockUtxos()');
+    console.log('  • getMockResponseForAddress()');
+    console.log('  • isValidTestAddress()');
+    console.log('  • isInvalidTestAddress()');
+    console.log('%cTry: mockUtxoResponses.singleUtxo', 'color: #ce9178;');
+  </script>
+</body>
+</html>
