@@ -181,9 +181,9 @@ async function handleQRScan() {
     }
 
     try {
-        // Dynamically import QrScanner
-        const { default: QrScanner } = await import('./qr-scanner.min.js');
-        
+        // Configure QR scanner worker path
+        QrScanner.WORKER_PATH = './qr-scanner-worker.min.js';
+
         // Create video element for camera feed
         const video = document.createElement('video');
         video.style.width = '300px';
