@@ -12,14 +12,14 @@ body {
 }
 
 .github-fork-ribbon {
-    --ribbon-offset-desktop: 42px;
+    --ribbon-offset: 42px;
     --ribbon-horizontal-offset: -56px;
-    --ribbon-width-desktop: 240px;
+    --ribbon-width: 240px;
     position: fixed;
-    top: var(--ribbon-offset-desktop);
+    top: var(--ribbon-offset);
     right: var(--ribbon-horizontal-offset);
     z-index: 1000;
-    width: var(--ribbon-width-desktop);
+    width: var(--ribbon-width);
     padding: 8px 0;
     background-color: #151513;
     color: #fff;
@@ -530,9 +530,9 @@ input:checked + .slider:before {
 
 @media (max-width: 600px) {
     .github-fork-ribbon {
-        --ribbon-offset-desktop: 28px;
+        --ribbon-offset: 28px;
         --ribbon-horizontal-offset: -74px;
-        --ribbon-width-desktop: 220px;
+        --ribbon-width: 220px;
         font-size: 12px;
     }
 
