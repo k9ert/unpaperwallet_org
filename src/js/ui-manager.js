@@ -3,15 +3,22 @@
  */
 
 // Global state variables
-let isOnline = navigator.onLine;
+const CONNECTIVITY_CHECK_URL = 'https://unpaperwallet.org/';
+let connectionState = navigator.onLine ? 'checking' : 'offline';
+let manuallyVerifiedOffline = false;
+let connectivityCheckId = 0;
 let testMode = false;
 let mockDataMode = false;
 let currentUtxos = [];
+let batchUtxos = [];
 
 // DOM elements
 let statusIndicator, statusText, testModeToggle, mockDataModeToggle, mockModeContainer, transactionForm, createTxBtn, scanPrivateKeyBtn;
+let scanSourceAddressBtn, scanTargetAddressBtn;
+let offlineVerification, offlineConfirmCheckbox, offlineConfirmButton;
 let txidInput, voutInput, privateKeyInput, targetAddressInput, amountInput, feeInput;
 let sourceAddressInput, fetchUtxosBtn, utxoListDiv, fetchErrorDiv;
+let batchSelectionSummary;
 
 // Initialize DOM references
 function initializeUI() {
@@ -23,6 +30,11 @@ function initializeUI() {
     transactionForm = document.getElementById('transaction-form');
     createTxBtn = document.getElementById('create-tx-btn');
     scanPrivateKeyBtn = document.getElementById('scan-private-key-btn');
+    scanSourceAddressBtn = document.getElementById('scan-source-address-btn');
+    scanTargetAddressBtn = document.getElementById('scan-target-address-btn');
+    offlineVerification = document.getElementById('offline-verification');
+    offlineConfirmCheckbox = document.getElementById('offline-confirm-checkbox');
+    offlineConfirmButton = document.getElementById('offline-confirm-btn');
 
     // Form inputs
     txidInput = document.getElementById('txid');
@@ -37,6 +49,7 @@ function initializeUI() {
     fetchUtxosBtn = document.getElementById('fetch-utxos-btn');
     utxoListDiv = document.getElementById('utxo-list');
     fetchErrorDiv = document.getElementById('fetch-error');
+    batchSelectionSummary = document.getElementById('batch-selection-summary');
 }
 
 // Setup event listeners
@@ -44,6 +57,10 @@ function setupEventListeners() {
     // Network status events
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
+    offlineConfirmCheckbox.addEventListener('change', () => {
+        offlineConfirmButton.disabled = !offlineConfirmCheckbox.checked;
+    });
+    offlineConfirmButton.addEventListener('click', confirmOfflineStatus);
 
     // Test mode toggle
     testModeToggle.addEventListener('change', handleTestModeToggle);
@@ -55,7 +72,7 @@ function setupEventListeners() {
 
     // Form submission
     transactionForm.addEventListener('submit', (event) => {
-        handleTransactionSubmit(event, isOnline, testMode);
+        handleTransactionSubmit(event, connectionState !== 'offline', testMode, batchUtxos);
     });
 
     // Input validation
@@ -75,6 +92,8 @@ function setupEventListeners() {
 
     // QR scan button
     scanPrivateKeyBtn.addEventListener('click', handleQRScan);
+    scanSourceAddressBtn.addEventListener('click', () => handleAddressQRScan(sourceAddressInput));
+    scanTargetAddressBtn.addEventListener('click', () => handleAddressQRScan(targetAddressInput));
 
     // UTXO fetcher button
     fetchUtxosBtn.addEventListener('click', handleFetchUtxos);
@@ -82,14 +101,61 @@ function setupEventListeners() {
 
 // Handle online status
 function handleOnline() {
-    isOnline = true;
-    updateConnectionStatus();
-    updateFormState();
+    manuallyVerifiedOffline = false;
+    void checkInternetConnectivity();
 }
 
 // Handle offline status
 function handleOffline() {
-    isOnline = false;
+    connectivityCheckId++;
+    connectionState = 'offline';
+    manuallyVerifiedOffline = false;
+    updateConnectionStatus();
+    updateFormState();
+}
+
+// navigator.onLine can stay true when virtual adapters have no internet route.
+async function checkInternetConnectivity() {
+    const checkId = ++connectivityCheckId;
+    if (!navigator.onLine) {
+        handleOffline();
+        return;
+    }
+
+    const wasManuallyVerifiedOffline = manuallyVerifiedOffline;
+    connectionState = 'checking';
+    updateConnectionStatus();
+    updateFormState();
+
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 3000);
+    try {
+        await fetch(CONNECTIVITY_CHECK_URL, {
+            method: 'HEAD',
+            mode: 'no-cors',
+            cache: 'no-store',
+            signal: controller.signal
+        });
+        if (checkId !== connectivityCheckId) return;
+        connectionState = 'online';
+        manuallyVerifiedOffline = false;
+    } catch {
+        if (checkId !== connectivityCheckId) return;
+        connectionState = wasManuallyVerifiedOffline ? 'offline' : 'unknown';
+        manuallyVerifiedOffline = wasManuallyVerifiedOffline;
+    } finally {
+        window.clearTimeout(timeout);
+        if (checkId === connectivityCheckId) {
+            updateConnectionStatus();
+            updateFormState();
+        }
+    }
+}
+
+function confirmOfflineStatus() {
+    if (connectionState !== 'unknown' || !offlineConfirmCheckbox.checked) return;
+    connectionState = 'offline';
+    manuallyVerifiedOffline = true;
     updateConnectionStatus();
     updateFormState();
 }
@@ -121,33 +187,46 @@ function handleMockDataModeToggle() {
 
 // Update connection status display
 function updateConnectionStatus() {
+    offlineVerification.classList.toggle('hidden', connectionState !== 'unknown');
+    if (connectionState !== 'unknown') {
+        offlineConfirmCheckbox.checked = false;
+        offlineConfirmButton.disabled = true;
+    }
+
     if (testMode) {
         statusIndicator.className = 'status-indicator status-test';
         statusText.textContent = 'TEST MODE - Development Only';
-    } else if (isOnline) {
+    } else if (connectionState === 'checking') {
+        statusIndicator.className = 'status-indicator status-checking';
+        statusText.textContent = 'CHECKING INTERNET CONNECTION - Inputs Disabled';
+    } else if (connectionState === 'unknown') {
+        statusIndicator.className = 'status-indicator status-unknown';
+        statusText.textContent = 'CONNECTION UNVERIFIED - Private Key Locked';
+    } else if (connectionState === 'online') {
         statusIndicator.className = 'status-indicator status-online';
         statusText.textContent = 'ONLINE - Inputs Disabled for Security';
     } else {
         statusIndicator.className = 'status-indicator status-offline';
-        statusText.textContent = 'OFFLINE - Safe to Use';
+        statusText.textContent = manuallyVerifiedOffline ? 'OFFLINE - Manually Verified' : 'OFFLINE - Safe to Use';
     }
 }
 
 // Update form state based on connection and test mode
 function updateFormState() {
-    const shouldEnable = !isOnline || testMode;
+    const shouldEnable = connectionState === 'offline' || testMode;
     const nonPrivateInputs = [txidInput, voutInput, targetAddressInput, amountInput, feeInput];
 
     // Always enable non-private fields for pasting convenience
     nonPrivateInputs.forEach(input => {
         input.disabled = false;
     });
+    if (batchUtxos.length) [txidInput, voutInput, amountInput].forEach(input => input.disabled = true);
 
     // Always enable source address input for convenience
     sourceAddressInput.disabled = false;
 
     // Fetch button only works when online (or in test mode)
-    fetchUtxosBtn.disabled = !isOnline && !testMode;
+    fetchUtxosBtn.disabled = connectionState === 'offline' && !testMode;
 
     // Only disable private key field when online (unless in test mode)
     privateKeyInput.disabled = !shouldEnable;
@@ -172,8 +251,10 @@ function updateFormState() {
 
 // Validate form inputs
 function validateForm() {
-    const inputs = [txidInput, voutInput, privateKeyInput, targetAddressInput, amountInput, feeInput];
-    const shouldEnable = !isOnline || testMode;
+    const inputs = batchUtxos.length
+        ? [privateKeyInput, targetAddressInput, feeInput]
+        : [txidInput, voutInput, privateKeyInput, targetAddressInput, amountInput, feeInput];
+    const shouldEnable = connectionState === 'offline' || testMode;
 
     if (!shouldEnable) {
         createTxBtn.disabled = true;
@@ -191,21 +272,21 @@ function validateForm() {
 
     // Validate specific fields
     try {
-        // Validate transaction ID
-        validateTransactionId(txidInput.value.trim());
-
-        // Validate UTXO index
-        validateUtxoIndex(voutInput.value);
-
         // Validate private key
         validatePrivateKey(privateKeyInput.value.trim());
 
         // Validate target address
         validateBitcoinAddress(targetAddressInput.value.trim());
 
-        // Validate amounts
-        validateAmount(amountInput.value);
-        validateFee(feeInput.value);
+        const fee = validateFee(feeInput.value);
+        if (batchUtxos.length) {
+            const total = batchUtxos.reduce((sum, utxo) => sum + validateAmount(utxo.value), 0);
+            if (total <= fee) throw new Error('Fee must be less than the combined UTXO amount');
+        } else {
+            validateTransactionId(txidInput.value.trim());
+            validateUtxoIndex(voutInput.value);
+            validateAmount(amountInput.value);
+        }
 
         createTxBtn.disabled = false;
         hideError();
@@ -215,97 +296,103 @@ function validateForm() {
     }
 }
 
-// Handle QR code scanning for private key
-async function handleQRScan() {
-    // Check if we have camera access
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+function handleAddressQRScan(input) {
+    startQrScanner('Bitcoin address', (qrData) => {
+        const address = qrData.replace(/^bitcoin:(?:\/\/)?/i, '').split('?')[0].trim();
+        validateBitcoinAddress(address);
+        input.value = address;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+}
+
+async function startQrScanner(label, onScan) {
+    if (!navigator.mediaDevices?.getUserMedia) {
         showError('Camera access not available in this browser');
         return;
     }
+    if (typeof QrScanner === 'undefined') {
+        showError('QR scanner is unavailable. Reload the page and try again.');
+        return;
+    }
+
+    hideError();
+    hideSuccess();
+
+    const modal = document.createElement('div');
+    modal.className = 'qr-scan-modal';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-label', `Scan ${label}`);
+
+    const dialog = document.createElement('div');
+    dialog.className = 'qr-scan-dialog';
+    const heading = document.createElement('h2');
+    heading.textContent = `Scan ${label}`;
+    const status = document.createElement('p');
+    status.className = 'qr-scan-status';
+    status.textContent = 'Starting camera...';
+    const video = document.createElement('video');
+    video.className = 'qr-scan-video';
+    video.setAttribute('playsinline', '');
+    video.muted = true;
+    const closeButton = document.createElement('button');
+    closeButton.type = 'button';
+    closeButton.className = 'button';
+    closeButton.textContent = 'Close';
+    dialog.append(heading, status, video, closeButton);
+    modal.appendChild(dialog);
+    document.body.appendChild(modal);
+
+    let qrScanner;
+    let closed = false;
+    const close = () => {
+        if (closed) return;
+        closed = true;
+        try { qrScanner?.destroy(); } catch {}
+        modal.remove();
+    };
+    closeButton.addEventListener('click', close);
+    modal.addEventListener('click', (event) => {
+        if (event.target === modal) close();
+    });
 
     try {
-        // QrScanner is loaded globally via qr-scanner-wrapper.js module
-        // Create video element for camera feed
-        const video = document.createElement('video');
-        video.style.width = '300px';
-        video.style.height = '300px';
-        video.setAttribute('playsinline', true);
-        video.setAttribute('autoplay', true);
-        video.setAttribute('muted', true);
-        
-        // Create modal for camera feed
-        const modal = document.createElement('div');
-        modal.style.cssText = `
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8); display: flex; justify-content: center;
-            align-items: center; z-index: 1000;
-        `;
-        
-        const modalContent = document.createElement('div');
-        modalContent.style.cssText = `
-            background: white; padding: 20px; border-radius: 10px;
-            text-align: center;
-        `;
-        
-        const closeBtn = document.createElement('button');
-        closeBtn.textContent = 'Close';
-        closeBtn.style.cssText = 'margin-top: 10px; padding: 10px 20px;';
-        
-        const statusDiv = document.createElement('div');
-        statusDiv.textContent = 'Starting camera...';
-        statusDiv.style.cssText = 'margin-bottom: 10px; font-weight: bold;';
-        
-        modalContent.appendChild(statusDiv);
-        modalContent.appendChild(video);
-        modalContent.appendChild(closeBtn);
-        modal.appendChild(modalContent);
-        document.body.appendChild(modal);
-
-        // Initialize QR scanner
-        const qrScanner = new QrScanner(video, (result) => {
-            let qrData = null;
-            
-            // Handle different result formats
-            if (typeof result === 'string') {
-                qrData = result;
-            } else if (result && result.data) {
-                qrData = result.data;
-            } else if (result && result.text) {
-                qrData = result.text;
-            } else if (result && result.content) {
-                qrData = result.content;
-            }
-            
-            if (qrData && qrData.trim()) {
-                privateKeyInput.value = qrData.trim();
-                validateForm();
-                qrScanner.destroy();
-                document.body.removeChild(modal);
-                showSuccess('Private key scanned successfully!');
-                setTimeout(hideSuccess, 2000);
-            } else {
-                statusDiv.textContent = 'QR code detected but no data - keep trying...';
-                return;
+        qrScanner = new QrScanner(video, (result) => {
+            const data = (typeof result === 'string' ? result : result?.data || result?.text || '').trim();
+            if (!data) return;
+            try {
+                onScan(data);
+                close();
+                showSuccess(`${label} scanned successfully!`);
+                window.setTimeout(hideSuccess, 2000);
+            } catch (error) {
+                status.textContent = error.message || 'Invalid QR code. Keep scanning.';
             }
         });
-        
-        // Set canvas optimization
-        qrScanner.setGrayscaleWeights(0.299, 0.587, 0.114, true);
-        qrScanner.setInversionMode('both');
-        
-        // Start the camera
+        qrScanner.setGrayscaleWeights?.(0.299, 0.587, 0.114, true);
+        qrScanner.setInversionMode?.('both');
         await qrScanner.start();
-        statusDiv.textContent = 'Camera ready - point at QR code';
-        
-        // Add event listener to close button
-        closeBtn.addEventListener('click', () => {
-            qrScanner.destroy();
-            document.body.removeChild(modal);
-        });
+        if (!closed) status.textContent = `Camera ready - point at the ${label} QR code`;
     } catch (error) {
-        showError('QR scanning failed: ' + error.message);
-        console.error('QR scan error:', error);
+        close();
+        if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+            showError('Camera access denied. Please allow camera access and try again.');
+        } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+            showError('Camera not available in this browser');
+        } else {
+            showError(`QR scanning failed: ${error.message}`);
+        }
     }
+}
+
+// Handle QR code scanning for private key
+function handleQRScan() {
+    startQrScanner('Private key', (qrData) => {
+        const privateKey = qrData.trim();
+        validatePrivateKey(privateKey);
+        privateKeyInput.value = privateKey;
+        privateKeyInput.dispatchEvent(new Event('input', { bubbles: true }));
+    });
 }
 
 // Handle UTXO fetching
@@ -320,6 +407,11 @@ async function handleFetchUtxos() {
     hideFetchError();
     hideError();
     hideSuccess();
+    currentUtxos = [];
+    batchUtxos = [];
+    batchSelectionSummary.classList.add('hidden');
+    utxoListDiv.classList.add('hidden');
+    updateFormState();
 
     // Show loading state
     const originalText = fetchUtxosBtn.textContent;
@@ -332,8 +424,6 @@ async function handleFetchUtxos() {
 
         if (utxos.length === 0) {
             showFetchError('No UTXOs found for this address');
-            utxoListDiv.classList.add('hidden');
-            currentUtxos = [];
         } else {
             currentUtxos = utxos;
             displayUtxoList(utxos);
@@ -342,11 +432,9 @@ async function handleFetchUtxos() {
         }
     } catch (error) {
         showFetchError(`Error fetching UTXOs: ${error.message}`);
-        utxoListDiv.classList.add('hidden');
-        currentUtxos = [];
     } finally {
         // Restore button state
-        fetchUtxosBtn.disabled = !isOnline && !testMode;
+        fetchUtxosBtn.disabled = connectionState === 'offline' && !testMode;
         fetchUtxosBtn.textContent = originalText;
     }
 }
@@ -394,6 +482,9 @@ function displayUtxoList(utxos) {
         <button type="button" class="button button-success" id="use-selected-utxo-btn">
             Use Selected UTXO
         </button>
+        <button type="button" class="button button-success" id="use-all-utxos-btn">
+            Batch all ${utxos.length} UTXOs in one transaction
+        </button>
     `;
 
     utxoListDiv.innerHTML = html;
@@ -416,6 +507,7 @@ function displayUtxoList(utxos) {
     // Attach handler to "Use Selected" button
     const useBtn = document.getElementById('use-selected-utxo-btn');
     useBtn.addEventListener('click', handleUseSelectedUtxo);
+    document.getElementById('use-all-utxos-btn').addEventListener('click', handleUseAllUtxos);
 }
 
 // Handle using selected UTXO
@@ -429,13 +521,15 @@ function handleUseSelectedUtxo() {
 
     const index = parseInt(selectedRadio.value);
     const utxo = currentUtxos[index];
+    batchUtxos = [];
+    batchSelectionSummary.classList.add('hidden');
 
     // Auto-fill form fields
     txidInput.value = utxo.txid;
     voutInput.value = utxo.vout;
     amountInput.value = utxo.value;
 
-    // Validate the form
+    updateFormState();
     validateForm();
 
     // Scroll to transaction form
@@ -449,6 +543,20 @@ function handleUseSelectedUtxo() {
     setTimeout(hideSuccess, 5000);
 
     hideFetchError();
+}
+
+function handleUseAllUtxos() {
+    if (!currentUtxos.length) return;
+    batchUtxos = [...currentUtxos];
+    const total = batchUtxos.reduce((sum, utxo) => sum + utxo.value, 0);
+    const unconfirmed = batchUtxos.filter(utxo => !utxo.status.confirmed).length;
+    txidInput.value = '';
+    voutInput.value = '';
+    amountInput.value = String(total);
+    batchSelectionSummary.textContent = `${batchUtxos.length} UTXOs selected in one transaction. Total input: ${formatSatoshis(total)} sats; one fee is deducted.${unconfirmed ? ` ${unconfirmed} are unconfirmed.` : ''}`;
+    batchSelectionSummary.classList.remove('hidden');
+    updateFormState();
+    validateForm();
 }
 
 // Show fetch error
@@ -481,7 +589,11 @@ function initializeApp() {
     initializeUI();
     initializeUtils();
 
-    updateConnectionStatus();
     setupEventListeners();
-    updateFormState();
+    if (navigator.onLine) {
+        void checkInternetConnectivity();
+        window.setInterval(() => void checkInternetConnectivity(), 30000);
+    } else {
+        handleOffline();
+    }
 }

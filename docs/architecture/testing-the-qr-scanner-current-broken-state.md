@@ -1,26 +1,10 @@
-# Testing the QR Scanner (Current Broken State)
+# Testing the QR Scanner
 
-## How to Test (Once Fixed)
+The Playwright suite covers the following without requesting camera access:
 
-1. **Serve locally**: `http://localhost:8000`
-2. **Go offline** or **enable test mode**
-3. **Click "Scan QR" button** next to private key field
-4. **Expected**: Modal opens with camera feed
-5. **Point camera** at WIF private key QR code
-6. **Expected**: Key scanned, modal closes, input populated
+- The bundled decoder reads a generated QR image.
+- Valid WIF keys populate the private-key field; invalid content is rejected so the user can retry.
+- Plain Bitcoin addresses and `bitcoin:` URIs populate the source and destination fields.
+- Invalid addresses do not enter the form.
 
-## Current Behavior (Broken)
-
-**Observed** (investigation needed):
-- Click "Scan QR" → Nothing happens? Error in console?
-- Modal doesn't appear?
-- Camera permission not requested?
-- Error message shown?
-
-**Investigation TODO**:
-1. Open browser dev tools
-2. Click "Scan QR" button
-3. Check console for errors (likely module loading error)
-4. Check network tab (does `qr-scanner.min.js` fail to load?)
-
----
+To smoke-test a physical camera, serve the app from HTTPS or `localhost`, enable Test Mode for the private-key scanner, grant camera access in the browser, and scan test data only. Confirm the dialog closes and the camera stops after a scan or manual close.
