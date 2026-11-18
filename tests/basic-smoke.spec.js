@@ -98,4 +98,12 @@ test.describe('Basic Application Smoke Tests', () => {
     await expect(criticalWarning).toContainText('Paper Wallet Security Workflow');
   });
 
+  test('footer links to the source repository', async ({ page }) => {
+    await page.goto('/');
+
+    const sourceLink = page.getByRole('link', { name: 'Source Code on GitHub' });
+    await expect(sourceLink).toBeVisible();
+    await expect(sourceLink).toHaveAttribute('href', 'https://github.com/k9ert/unpaperwallet_org');
+  });
+
 });

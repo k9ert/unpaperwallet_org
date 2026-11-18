@@ -52,6 +52,34 @@ function createTransaction(txid, vout, privateKeyWIF, targetAddress, amount, fee
     }
 }
 
+function createBatchTransaction(utxos, privateKeyWIF, targetAddress, fee) {
+    if (!Array.isArray(utxos) || !utxos.length) throw new Error('Select at least one UTXO');
+    validatePrivateKey(privateKeyWIF);
+    validateBitcoinAddress(targetAddress);
+    const feeNum = validateFee(fee);
+    const outpoints = new Set();
+    const inputs = utxos.map(({ txid, vout, value }) => {
+        validateTransactionId(txid);
+        const index = validateUtxoIndex(vout);
+        if (!Number.isSafeInteger(value) || value <= 0) throw new Error('Each UTXO must have a positive satoshi amount');
+        const outpoint = `${txid}:${index}`;
+        if (outpoints.has(outpoint)) throw new Error('Duplicate UTXO selected');
+        outpoints.add(outpoint);
+        return { txid, index, value };
+    });
+    const total = inputs.reduce((sum, input) => sum + input.value, 0);
+    if (!Number.isSafeInteger(total) || total <= feeNum) {
+        throw new Error('Fee must be less than the combined UTXO amount');
+    }
+
+    const keyPair = bitcoin.ECPair.fromWIF(privateKeyWIF, bitcoin.networks.bitcoin);
+    const txBuilder = new bitcoin.TransactionBuilder(bitcoin.networks.bitcoin);
+    inputs.forEach(({ txid, index }) => txBuilder.addInput(txid, index));
+    txBuilder.addOutput(targetAddress, total - feeNum);
+    inputs.forEach((_, index) => txBuilder.sign(index, keyPair));
+    return txBuilder.build().toHex();
+}
+
 // Display the created transaction
 function displayTransaction(txHex) {
     // Show transaction hex
@@ -90,7 +118,7 @@ function displayTransaction(txHex) {
 }
 
 // Handle transaction form submission
-function handleTransactionSubmit(event, isOnline, testMode) {
+function handleTransactionSubmit(event, isOnline, testMode, batchUtxos = []) {
     event.preventDefault();
     
     if (!isOnline || testMode) {
@@ -107,7 +135,9 @@ function handleTransactionSubmit(event, isOnline, testMode) {
             const fee = parseInt(document.getElementById('fee').value);
 
             // Create the transaction
-            const txHex = createTransaction(txid, vout, privateKeyWIF, targetAddress, amount, fee);
+            const txHex = batchUtxos.length
+                ? createBatchTransaction(batchUtxos, privateKeyWIF, targetAddress, fee)
+                : createTransaction(txid, vout, privateKeyWIF, targetAddress, amount, fee);
             
             // Display the transaction
             displayTransaction(txHex);

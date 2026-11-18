@@ -1,48 +1,31 @@
-# Security Model (Critical Constraint)
+# Security Model
 
-## Online/Offline Detection
+## Online and offline detection
 
-**File**: `ui-manager.js:6, 64-76`
+`src/js/ui-manager.js` combines the browser's `navigator.onLine` state with a short request to the published site. The browser flag alone can report online when a virtual adapter is active without an internet route.
 
-```javascript
-let isOnline = navigator.onLine;
+| State | Private-key entry and transaction creation |
+|---|---|
+| Checking or online | Disabled |
+| Connection check failed | Disabled until the user confirms the device is fully disconnected |
+| Offline event or confirmed offline | Enabled |
+| Test mode | Enabled for development |
 
-window.addEventListener('online', handleOnline);
-window.addEventListener('offline', handleOffline);
-```
+A successful request means the site is reachable, so the app locks private-key entry. A failed request cannot prove there is no internet route; the confirmation prompt tells users to check physical, VPN, and virtual adapters. Connectivity is checked at startup, after browser online events, and every 30 seconds.
 
-**Status Indicator States**:
-- 🔴 **ONLINE**: Red - "ONLINE - Inputs Disabled for Security"
-- 🟢 **OFFLINE**: Green - "OFFLINE - Safe to Use"
-- 🟡 **TEST MODE**: Orange - "TEST MODE - Development Only"
+The confirmation is a user assertion, not a technical guarantee. For maximum safety, disconnect all network interfaces before entering a private key.
 
-## Form State Management
+## Form state management
 
-**File**: `ui-manager.js:100-128`
+Non-sensitive transaction details remain available while online. Private-key entry, private-key QR scanning, and transaction creation are disabled while the connection is checking, online, or unverified. Address QR scanning remains available because it reads public Bitcoin addresses.
 
-**Rules**:
-1. **Non-sensitive fields** (txid, vout, target address, amount, fee): Always enabled
-2. **Private key field**: Disabled when online (unless test mode)
-3. **Submit button**: Disabled when online (unless test mode)
-4. **Scan QR button**: Disabled when online (unless test mode)
+## Test mode
 
-```javascript
-const shouldEnable = !isOnline || testMode;
-privateKeyInput.disabled = !shouldEnable;
-createTxBtn.disabled = !shouldEnable;
-scanPrivateKeyBtn.disabled = !shouldEnable;
-```
+Test mode intentionally enables private-key entry and transaction creation while online. It is for development only and should remain off during real wallet use.
 
-## Security Features
+## Private-key handling
 
-| Feature | Implementation | Purpose |
-|---------|---------------|---------|
-| **Online Detection** | `navigator.onLine` event listeners | Prevent private key exposure online |
-| **Input Disabling** | Programmatic `disabled` attribute | Force offline usage |
-| **Test Mode** | Toggle switch for development | Allow testing while online |
-| **Paste Prevention** | ⚠️ NOT IMPLEMENTED (instructions say it is) | Claimed in UI instructions |
-| **Page Unload Warning** | `beforeunload` event if private key entered | Prevent accidental loss |
-
-**⚠️ DISCREPANCY**: Instructions claim private key field prevents pasting, but code doesn't implement this. Only disabling is enforced.
-
----
+- QR content is validated as a WIF private key before it enters the form.
+- Invalid QR content remains in the scanner dialog so the user can retry.
+- The application does not log or transmit scanned private-key data.
+- Camera tracks are released when the scanner dialog closes.

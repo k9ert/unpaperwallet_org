@@ -53,6 +53,16 @@
             The private key field and submit button are disabled when online to prevent accidental exposure of sensitive information.
         </div>
 
+        <div id="offline-verification" class="offline-verification hidden" role="region" aria-live="polite">
+            <strong>Cannot verify the internet connection.</strong>
+            <p>The browser may still report online because of a virtual adapter. This check only tests whether this website responds; it cannot prove that every internet route is disconnected. Disconnect Wi-Fi, Ethernet, VPN and virtual network adapters, then confirm below.</p>
+            <label class="offline-confirmation" for="offline-confirm-checkbox">
+                <input type="checkbox" id="offline-confirm-checkbox">
+                I verified that this device has no internet connection.
+            </label>
+            <button type="button" class="button" id="offline-confirm-btn" disabled>Enable Offline Key Entry</button>
+        </div>
+
         <div id="error-message" class="error hidden"></div>
         <div id="success-message" class="success hidden"></div>
 
@@ -66,8 +76,11 @@
 
                     <div class="form-group">
                         <label for="source-address">Bitcoin Address:</label>
-                        <input type="text" id="source-address"
-                               placeholder="Enter address to fetch UTXOs (1..., 3..., or bc1...)">
+                        <div class="input-with-button">
+                            <input type="text" id="source-address"
+                                   placeholder="Enter address to fetch UTXOs (1..., 3..., or bc1...)">
+                            <button type="button" class="button scan-button" id="scan-source-address-btn">Scan QR</button>
+                        </div>
                     </div>
 
                     <button type="button" class="button" id="fetch-utxos-btn">
@@ -80,9 +93,9 @@
 
                 <h2>2. Transaction Form</h2>
                 <div class="form-info">
-                    <strong>📝 Note:</strong> If you have multiple UTXOs, create one transaction at a time while offline,
-                    then verify all transactions before broadcasting.
+                    <strong>📝 Note:</strong> Batch all fetched UTXOs into one transaction to pay one fee. Verify the total and destination before broadcasting.
                 </div>
+                <div id="batch-selection-summary" class="form-info hidden" role="status"></div>
 
         <form id="transaction-form">
             <div class="form-group">
@@ -105,7 +118,10 @@
 
             <div class="form-group">
                 <label for="target-address">Target Address:</label>
-                <input type="text" id="target-address" placeholder="Enter Bitcoin address (legacy 1..., script 3..., or native segwit bc1...)" disabled>
+                <div class="input-with-button">
+                    <input type="text" id="target-address" placeholder="Enter Bitcoin address (legacy 1..., script 3..., or native segwit bc1...)" disabled>
+                    <button type="button" class="button scan-button" id="scan-target-address-btn">Scan QR</button>
+                </div>
             </div>
 
             <div class="form-group">
@@ -197,21 +213,20 @@
                 <h3>4. Go Offline and Create, Verify & Broadcast ALL Transactions</h3>
                 <ol>
                     <li><strong>Disconnect from the internet</strong> (turn off WiFi/ethernet)</li>
-                    <li>Wait for the status indicator to show "OFFLINE - Safe to Use"</li>
-                    <li>Sometimes VPN provider might interfere the detection. Disable VPN if necessary.</li>
-                    <li>Now <strong>type</strong> your <strong>Private Key</strong> in WIF format (starts with 5, K, or L)</li>
-                    <li><em>Note: Pasting is disabled for the private key field for security</em></li>
-                    <li><strong>For EACH UTXO (starting with the first):</strong>
+                    <li>Wait for "OFFLINE - Safe to Use" or confirm the offline verification prompt after checking the network adapters.</li>
+                    <li>If the browser still reports online, disconnect VPN and virtual adapters before confirming offline status.</li>
+                    <li>Now enter or scan your <strong>Private Key</strong> in WIF format (starts with 5, K, or L)</li>
+                    <li><strong>For ALL fetched UTXOs:</strong>
                         <ul>
-                            <li>Click <strong>"Create Transaction"</strong></li>
+                            <li>While online, click <strong>"Batch all UTXOs in one transaction"</strong> to select every fetched input</li>
+                            <li>Enter the key offline, then click <strong>"Create Transaction"</strong> once</li>
                             <li>Go to the <strong>coinb.in/#verify</strong> tab (should still be open from step 1)</li>
                             <li>Paste the transaction hex and click "Submit"</li>
                             <li><strong>Verify</strong> that the destination address is correct</li>
-                            <li><strong>Verify</strong> that the amount is correct</li>
+                            <li><strong>Verify</strong> the total amount after one fee is deducted</li>
                             <li>If correct, scan the transaction QR code with your mobile device</li>
                             <li>On your mobile, go to mempool.space/tx/push and paste the transaction hex</li>
                             <li>Broadcast the transaction and verify the funds go to the correct address</li>
-                            <li><strong>For ADDITIONAL UTXOs:</strong> Clear the TxID, UTXO Index, Amount, and Fee fields, enter the next UTXO's details and new target address (keep same private key), then repeat this process</li>
                         </ul>
                     </li>
                     <li><strong>⚠️ STAY OFFLINE</strong> until you've created, verified, and broadcast transactions for ALL UTXOs!</li>
@@ -237,7 +252,7 @@
                     <li><strong>Why?</strong> Once you enter your private key on any device, the wallet is considered "hot" and potentially compromised</li>
                     <li><strong>Never leave UTXOs</strong> on a paper wallet after using the private key</li>
                     <li><strong>Correct workflow:</strong> Go offline → Create ALL transactions → Verify ALL transactions → Go online → Broadcast ALL transactions</li>
-                    <li><strong>If you have multiple UTXOs,</strong> you must create separate transactions for each one while staying offline</li>
+                    <li><strong>Batch all UTXOs into one transaction</strong> when using the fetched list; one fee is deducted for the whole transaction</li>
                     <li><strong>Verify transactions offline</strong> using coinb.in before reconnecting to internet</li>
                     <li><strong>After broadcasting all transactions,</strong> your paper wallet is empty and should be destroyed</li>
                 </ul>
@@ -248,7 +263,7 @@
                 <ul>
                     <li>Always verify the transaction details before broadcasting</li>
                     <li>Never enter your private key while online</li>
-                    <li>Private key field has pasting disabled for security - type it manually</li>
+                    <li>Only enter or scan the private key after confirming the device is offline</li>
                     <li>Double-check the destination address</li>
                     <li>Bitcoin transactions are irreversible once confirmed</li>
                 </ul>
@@ -260,6 +275,9 @@
                 always verify everything before broadcasting transactions.
             </div>
         </div>
+        <footer class="site-footer">
+            This project is open source. <a href="https://github.com/k9ert/unpaperwallet_org" target="_blank" rel="noopener noreferrer">Source Code on GitHub</a>.
+        </footer>
     </div>
 
     <!-- Local Bitcoin Library -->
